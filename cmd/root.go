@@ -11,6 +11,7 @@ import (
 )
 
 var logLevel string
+var appVersion = "dev"
 
 var rootCmd = &cobra.Command{
 	Use:   "k8s-controller-tutorial",
