@@ -1,3 +1,6 @@
+
+# Golang Kubernetes Controller Tutorial
+
 This project is a step-by-step tutorial for DevOps and SRE engineers to learn about building Golang CLI applications and Kubernetes controllers. Each step is implemented as a feature branch and includes a README section with explanations and command history.
 
 ---
@@ -46,8 +49,6 @@ git checkout -b step3-pflag-loglevel
 # edited cmd/root.go to add log-level flag
 ```
 
----
-
 ## Step 4: FastHTTP Server Command
 
 - Added a new `server` command using [fasthttp](https://github.com/valyala/fasthttp).
@@ -75,6 +76,8 @@ git commit -m "step4: add fasthttp server command with port flag"
 ```
 
 ---
+
+Continue to the next steps for more advanced Kubernetes and controller features! 
 
 Continue to the next steps for more advanced Kubernetes and controller features! 
 
