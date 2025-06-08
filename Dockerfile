@@ -5,7 +5,7 @@ COPY . .
 RUN go build -o k8s-controller-tutorial main.go
 
 # Final stage
-FROM gcr.io/distroless/base-debian11
+FROM gcr.io/distroless/static-debian12
 WORKDIR /
 COPY --from=builder /app/k8s-controller-tutorial .
 EXPOSE 8080
