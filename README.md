@@ -78,4 +78,32 @@ git commit -m "step4: add fasthttp server command with port flag"
 
 ---
 
+## Step 6: List Kubernetes Deployments with client-go
+
+- Added a new `list` command using [k8s.io/client-go](https://github.com/kubernetes/client-go).
+- Lists deployments in the default namespace.
+- Supports a `--kubeconfig` flag to specify the kubeconfig file for authentication.
+- Uses zerolog for error logging.
+
+**Usage:**
+```sh
+go run main.go list --kubeconfig ~/.kube/config
+```
+
+**What it does:**
+- Connects to the Kubernetes cluster using the provided kubeconfig file.
+- Lists all deployments in the `default` namespace and prints their names.
+
+**Command history:**
+```sh
+go get k8s.io/client-go@v0.29.0
+# created cmd/list.go, added list command
+# edited go.mod, go.sum
+# run go mod tidy
+git add .
+git commit -m "step6: add list command for Kubernetes deployments using client-go"
+```
+
+---
+
 Continue to the next steps for more advanced Kubernetes and controller features! 
