@@ -1,6 +1,21 @@
-# Makefile, Dockerfile and GitHub workflow
+# List Kubernetes Deployments with client-go
 
-This step introduces the Makefile for build automation, a distroless Dockerfile for secure containerization, a GitHub workflow for CI/CD, and initial test coverage to ensure code quality and deployment readiness.
+- Added a new `list` command using [k8s.io/client-go](https://github.com/kubernetes/client-go).
+- Lists deployments in the default namespace.
+- Supports a `--kubeconfig` flag to specify the kubeconfig file for authentication.
+- Uses zerolog for error logging.
+
+**Usage:**
+```sh
+git switch feature/step6-list-deployments 
+go run main.go --log-level debug --kubeconfig ~/.kube/config list
+```
+
+**What it does:**
+- Connects to the Kubernetes cluster using the provided kubeconfig file.
+- Lists all deployments in the `default` namespace and prints their names.
+
+---
 
 ## Project Structure
 
@@ -10,6 +25,7 @@ This step introduces the Makefile for build automation, a distroless Dockerfile 
 - `Makefile` — Build automation tasks.
 - `Dockerfile` — Distroless Dockerfile for secure containerization.
 - `.github/workflows/` — GitHub Actions workflows for CI/CD.
+- `list.go` - list cli command
 
 ## License
 
