@@ -26,6 +26,7 @@ go run main.go --log-level debug --kubeconfig ~/.kube/config list
 - `Dockerfile` — Distroless Dockerfile for secure containerization.
 - `.github/workflows/` — GitHub Actions workflows for CI/CD.
 - `list.go` - list cli command
+- `charts/app` - helm chart
 
 ## License
 
