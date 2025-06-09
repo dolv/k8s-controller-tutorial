@@ -17,16 +17,11 @@ var serverCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		level := parseLogLevel(logLevel)
 		configureLogger(level)
-		log.Info().Msg("This is an info log")
-		log.Debug().Msg("This is a debug log")
-		log.Trace().Msg("This is a trace log")
-		log.Warn().Msg("This is a warn log")
-		log.Error().Msg("This is an error log")
 		handler := func(ctx *fasthttp.RequestCtx) {
 			fmt.Fprintf(ctx, "Hello from FastHTTP!")
 		}
 		addr := fmt.Sprintf(":%d", serverPort)
-		log.Info().Msgf("Starting FastHTTP server on %s", addr)
+		log.Info().Msgf("Starting FastHTTP server on %s (version: %s)", addr, appVersion)
 		if err := fasthttp.ListenAndServe(addr, handler); err != nil {
 			log.Error().Err(err).Msg("Error starting FastHTTP server")
 			os.Exit(1)
