@@ -10,8 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var logLevel string
-var appVersion = "dev"
+var (
+	logLevel   string
+	appVersion = "dev"
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "k8s-controller-tutorial",
