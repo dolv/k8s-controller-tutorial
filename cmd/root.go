@@ -11,6 +11,7 @@ import (
 )
 
 var logLevel string
+var appVersion string
 
 var rootCmd = &cobra.Command{
 	Use:   "k8s-controller-tutorial",
@@ -31,6 +32,7 @@ to quickly create a Cobra application.
 		log.Warn().Msg("This is a warn log")
 		log.Error().Msg("This is an error log")
 		fmt.Println("Welcome to k8s-controller-tutorial CLI!")
+		fmt.Println("App Version:", appVersion)
 	},
 }
 
