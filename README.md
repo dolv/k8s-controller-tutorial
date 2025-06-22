@@ -1,49 +1,80 @@
+
 # Golang Kubernetes Controller Tutorial
 
-This project is a step-by-step tutorial for DevOps and SRE engineers to learn about building Golang applications and Kubernetes controllers. Each step is implemented as a feature branch and includes a README section with explanations and command history.
-
-## Roadmap
-
-This tutorial guides you through building a production-grade Golang Kubernetes controller, step by step:
-
-1. **Golang CLI Application using Cobra** — Initialize a CLI app with cobra-cli.
-2. **Zerolog for Log Levels** — Add structured logging with zerolog.
-3. **pflag for Log Level Flags** — Integrate pflag for CLI log level flags.
-4. **FastHTTP Server Command** — Add a server command with configurable port and log level.
-5. **Makefile, Dockerfile, and GitHub Workflow** — Introduce build automation, secure containerization, CI/CD, and tests.
-6. **List Kubernetes Deployments with client-go** — List deployments in the default namespace.
-7. **Deployment Informer with client-go** — Watch and log Deployment events.
-8. **/deployments JSON API Endpoint** — Serve deployment names as JSON from the informer cache.
-9. **controller-runtime Deployment Controller** — Reconcile Deployments and log events.
-10. **Leader Election and Metrics** — Add HA and metrics endpoint to the controller manager.
-11. **FrontendPage CRD and Advanced Controller** — Define a custom resource and manage Deployments/ConfigMaps.
-12. **Platform API (CRUD + Swagger)** — Add RESTful CRUD API and Swagger UI.
-13. **MCP Integration** — Integrate MCP server for multi-cluster management.
-14. **JWT Authentication** — Secure API endpoints with JWT.
-15. **OpenTelemetry Instrumentation** — Add distributed tracing with OpenTelemetry.
+This project is a step-by-step tutorial for DevOps and SRE engineers to learn about building Golang CLI applications and Kubernetes controllers. Each step is implemented as a feature branch and includes a README section with explanations and command history.
 
 ---
-![logo](docs/img/ctrllogo.png)
 
-## Dev Environment (GitHub Codespaces)
-### Recommended way: 
- - 1. develop and test your code with envtest k8s control plane first (we use it on step7)
- - 2. test controller with local kind cluster (find example)
- - 3. deploy controller as helm chart in production cluster (use helm chart from step10)
-      
+## Step 1: Golang CLI Application using Cobra
+
+- Initialized a new CLI application using [cobra-cli](https://github.com/spf13/cobra).
+- Provides a basic command-line interface.
+
+**Command history:**
 ```sh
-#### Install brew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-### Install kind
-brew install kind
-### Install K9S for cluster management
-curl -sS https://webi.sh/k9s | sh
-### Create kind cluster
-kind create cluster
-### Add some usefull aliases
-alias kk="EDITOR='code --wait' k9s"
-alias k=kubectl
-## Run complete controller setup
- go run main.go
+git checkout -b step1-cobra-cli
+cobra-cli init --pkg-name github.com/yourusername/k8s-controller-tutorial
+# edited main.go, cmd/root.go
 ```
+
+---
+
+## Step 2: Zerolog for Log Levels
+
+- Integrated [zerolog](https://github.com/rs/zerolog) for structured logging.
+- Supports log levels: info, debug, trace, warn, error.
+
+**Command history:**
+```sh
+git checkout -b step2-zerolog
+go get github.com/rs/zerolog
+# edited cmd/root.go to add zerolog logging
+```
+
+---
+
+## Step 3: pflag for Log Level Flags
+
+- Added [pflag](https://github.com/spf13/pflag) to support a `--log-level` flag.
+- Users can set log level via CLI flag.
+
+**Usage:**
+```sh
+go run main.go --log-level debug
+```
+
+**Command history:**
+```sh
+git checkout -b step3-pflag-loglevel
+# edited cmd/root.go to add log-level flag
+```
+
+## Step 4: FastHTTP Server Command
+
+- Added a new `server` command using [fasthttp](https://github.com/valyala/fasthttp).
+- The command starts a FastHTTP server with a configurable port (default: 8080).
+- Uses zerolog for logging.
+
+**Usage:**
+```sh
+go run main.go server --port 8080
+```
+
+**What it does:**
+- Starts a FastHTTP server on the specified port.
+- Responds with "Hello from FastHTTP!" to any request.
+
+**Command history:**
+```sh
+git checkout -b step4-fasthttp-server
+go get github.com/valyala/fasthttp
+# created cmd/server.go, added server command
+# added cmd/server_test.go for basic tests
+go mod tidy
+git add .
+git commit -m "step4: add fasthttp server command with port flag"
+```
+
+
+Continue to the next steps for more advanced Kubernetes and controller features! 
+
