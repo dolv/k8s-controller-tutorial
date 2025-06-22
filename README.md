@@ -1,4 +1,3 @@
-
 # Golang Kubernetes Controller Tutorial
 
 This project is a step-by-step tutorial for DevOps and SRE engineers to learn about building Golang CLI applications and Kubernetes controllers. Each step is implemented as a feature branch and includes a README section with explanations and command history.
@@ -77,4 +76,38 @@ git commit -m "step4: add fasthttp server command with port flag"
 
 
 Continue to the next steps for more advanced Kubernetes and controller features! 
+
+# List Kubernetes Deployments with client-go
+
+- Added a new `list` command using [k8s.io/client-go](https://github.com/kubernetes/client-go).
+- Lists deployments in the default namespace.
+- Supports a `--kubeconfig` flag to specify the kubeconfig file for authentication.
+- Uses zerolog for error logging.
+
+**Usage:**
+```sh
+git switch feature/step6-list-deployments 
+go run main.go --log-level debug --kubeconfig ~/.kube/config list
+```
+
+**What it does:**
+- Connects to the Kubernetes cluster using the provided kubeconfig file.
+- Lists all deployments in the `default` namespace and prints their names.
+
+---
+
+## Project Structure
+
+- `cmd/` — Contains your CLI commands.
+- `main.go` — Entry point for your application.
+- `server.go` - fasthttp server
+- `Makefile` — Build automation tasks.
+- `Dockerfile` — Distroless Dockerfile for secure containerization.
+- `.github/workflows/` — GitHub Actions workflows for CI/CD.
+- `list.go` - list cli command
+- `charts/app` - helm chart
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
 

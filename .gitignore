@@ -13,9 +13,6 @@ controller
 # Go modules
 vendor/
 
-# Dependency directories (remove the comment below if you use Go modules)
-# /vendor/
-
 # IDE/editor files
 .idea/
 .vscode/
@@ -36,4 +33,3 @@ Thumbs.db
 *.coverprofile
 coverage.out
 
-# Cobra CLI generated files (if any) 

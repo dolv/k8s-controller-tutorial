@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -13,13 +14,14 @@ import (
 )
 
 var (
-	logLevel string
-	myVar    string
+	logLevel   string
+	myVar      string
+	appVersion = "dev"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "k8s-controller-tutorial",
-	Short: "A brief description of your application",
+	Short: "A brief description of your application (version: " + appVersion + ")",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
 
@@ -33,6 +35,8 @@ to quickly create a Cobra application.
 			Msgf("Logger initialized with effective log-level=%s", viper.GetString("log-level"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		level := parseLogLevel(logLevel)
+		configureLogger(level)
 		log.Info().Msg("This is an info log")
 		log.Debug().Msg("This is a debug log")
 		log.Trace().Msg("This is a trace log")
@@ -45,11 +49,29 @@ to quickly create a Cobra application.
 	},
 }
 
+func parseLogLevel(lvl string) zerolog.Level {
+	switch strings.ToLower(lvl) {
+	case "trace":
+		return zerolog.TraceLevel
+	case "debug":
+		return zerolog.DebugLevel
+	case "info":
+		return zerolog.InfoLevel
+	case "warn":
+		return zerolog.WarnLevel
+	case "error":
+		return zerolog.ErrorLevel
+	default:
+		return zerolog.InfoLevel
+	}
+}
+
 func configureLogger(level zerolog.Level) {
 	fmt.Println("Setting log level to:", level)
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
 	zerolog.SetGlobalLevel(level)
-	if level == zerolog.TraceLevel {
+	switch level {
+	case zerolog.TraceLevel:
 		zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
 			return fmt.Sprintf("%s:%d", file, line)
 		}
@@ -64,7 +86,7 @@ func configureLogger(level zerolog.Level) {
 				zerolog.MessageFieldName,
 			},
 		}).With().Caller().Logger()
-	} else if level == zerolog.DebugLevel {
+	case zerolog.DebugLevel:
 		log.Logger = log.Output(zerolog.ConsoleWriter{
 			Out:        os.Stderr,
 			TimeFormat: "2006-01-02 15:04:05.000",
@@ -74,7 +96,7 @@ func configureLogger(level zerolog.Level) {
 				zerolog.MessageFieldName,
 			},
 		})
-	} else {
+	default:
 		log.Logger = log.Output(os.Stderr)
 	}
 }
