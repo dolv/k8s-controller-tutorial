@@ -12,6 +12,7 @@ import (
 
 var logLevel string
 var appVersion string
+var namespace string
 
 var rootCmd = &cobra.Command{
 	Use:   "k8s-controller-tutorial",
@@ -95,4 +96,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Set log level: trace, debug, info, warn, error")
+	rootCmd.PersistentFlags().StringParV(&namespace, "namespace", "n", "default", "Kubernetes namespace to use")
 }
