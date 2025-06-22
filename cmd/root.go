@@ -58,7 +58,8 @@ func parseLogLevel(lvl string) zerolog.Level {
 func configureLogger(level zerolog.Level) {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
 	zerolog.SetGlobalLevel(level)
-	if level == zerolog.TraceLevel {
+	switch level {
+	case zerolog.TraceLevel:
 		zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
 			return fmt.Sprintf("%s:%d", file, line)
 		}
@@ -73,7 +74,7 @@ func configureLogger(level zerolog.Level) {
 				zerolog.MessageFieldName,
 			},
 		}).With().Caller().Logger()
-	} else if level == zerolog.DebugLevel {
+	case zerolog.DebugLevel:
 		log.Logger = log.Output(zerolog.ConsoleWriter{
 			Out:        os.Stderr,
 			TimeFormat: "2006-01-02 15:04:05.000",
@@ -83,7 +84,7 @@ func configureLogger(level zerolog.Level) {
 				zerolog.MessageFieldName,
 			},
 		})
-	} else {
+	default:
 		log.Logger = log.Output(os.Stderr)
 	}
 }
