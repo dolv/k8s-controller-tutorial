@@ -5,19 +5,21 @@ controller
 *.dll
 *.so
 *.dylib
+*.test
 
 # Build directories
 /build/
 /bin/
 
-# Go modules
-vendor/
+# Output
+coverage.out
+coverage.xml
+report.xml
 
-# IDE/editor files
-.idea/
+# IDE/editor
 .vscode/
+.idea/
 *.swp
-*.swo
 
 # OS files
 .DS_Store
@@ -33,3 +35,6 @@ Thumbs.db
 *.coverprofile
 coverage.out
 
+
+# Envtest assets
+bin/k8s/ 
