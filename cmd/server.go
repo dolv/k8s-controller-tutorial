@@ -12,7 +12,11 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-var serverPort int
+var (
+	serverPort       int
+	serverKubeconfig string
+	serverInCluster  bool
+)
 
 const (
 	requestIDKey = "requestID"
@@ -64,4 +68,6 @@ var serverCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serverCmd)
 	serverCmd.Flags().IntVar(&serverPort, "port", 8080, "Port to run the server on")
+	serverCmd.Flags().StringVar(&serverKubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
+	serverCmd.Flags().BoolVar(&serverInCluster, "in-cluster", false, "Use in-cluster Kubernetes config")
 }
