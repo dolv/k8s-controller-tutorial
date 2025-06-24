@@ -23,6 +23,7 @@ func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientse
 			options.FieldSelector = fields.Everything().String()
 		}),
 	)
+	log.Debug().Msg("Creating Informer instance")
 	informer := factory.Apps().V1().Deployments().Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{

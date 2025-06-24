@@ -1,15 +1,20 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -41,11 +46,35 @@ func loggingMiddleware(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	}
 }
 
+func getServerKubeClient(kubeconfigPath string, inCluster bool) (*kubernetes.Clientset, error) {
+	var config *rest.Config
+	var err error
+	if inCluster {
+		config, err = rest.InClusterConfig()
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(config)
+}
+
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Start a FastHTTP server",
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Trace().Msg("This is a top-level trace log from serverCmd.Run")
+		log.Trace().Msg("Getting clientset instance")
+		clientset, err := getServerKubeClient(serverKubeconfig, serverInCluster)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create Kubernetes client")
+			os.Exit(1)
+		}
+		ctx := context.Background()
+		log.Trace().Msg("Starting Informer")
+		go informer.StartDeploymentInformer(ctx, clientset)
+		log.Trace().Msg("Getting handler instance")
 		handler := func(ctx *fasthttp.RequestCtx) {
 			reqLogger, ok := ctx.UserValue(loggerKey).(zerolog.Logger)
 			if !ok {
@@ -55,6 +84,7 @@ var serverCmd = &cobra.Command{
 			fmt.Fprintf(ctx, "Hello from FastHTTP! Your request ID: %s", ctx.UserValue(requestIDKey))
 			reqLogger.Trace().Msg("Handler exiting")
 		}
+		log.Trace().Msg("Adding loggingMiddleware to handler instance")
 		wrappedHandler := loggingMiddleware(handler)
 		addr := fmt.Sprintf(":%d", serverPort)
 		log.Info().Msgf("Starting FastHTTP server on %s", addr)

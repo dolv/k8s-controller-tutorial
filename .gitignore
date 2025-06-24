@@ -12,6 +12,7 @@ controller
 /bin/
 
 # Output
+*.coverprofile
 coverage.out
 coverage.xml
 report.xml
@@ -31,10 +32,8 @@ Thumbs.db
 # Logs
 *.log
 
-# Coverage files
-*.coverprofile
-coverage.out
-
+# Go modules
+vendor/
 
 # Envtest assets
 bin/k8s/ 
