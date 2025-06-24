@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	logLevel   string
-	myVar      string
-	appVersion = "dev"
+	logLevel       string
+	namespace      string
+	kubeconfigPath string
+	appVersion     = "dev"
 )
 
 var rootCmd = &cobra.Command{
@@ -30,6 +31,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		fmt.Println(args)
 		configureLogger(config.ResolveLogLevel(cmd))
 		log.Info().
 			Msgf("Logger initialized with effective log-level=%s", viper.GetString("log-level"))
@@ -43,9 +45,6 @@ to quickly create a Cobra application.
 		log.Warn().Msg("This is a warn log")
 		log.Error().Msg("This is an error log")
 		fmt.Println("Welcome to k8s-controller-tutorial CLI!")
-		log.Info().
-			Str("myVar", myVar).
-			Msg("Received flag value")
 	},
 }
 
@@ -114,10 +113,16 @@ func init() {
 	viper.SetDefault("log-level", "info")
 
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Set log level: trace, debug, info, warn, error")
-	rootCmd.PersistentFlags().StringVar(&myVar, "myvar", "default", "Set myvar: any string")
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Kubernetes namespace to use")
+	rootCmd.PersistentFlags().StringVarP(&kubeconfigPath, "kubeconfig", "k", "", "Path to the kubeconfig file")
 
 	// Config file (config.yaml in cwd)
-	viper.SetConfigName("config")
+	viper.SetConfigName("config.yaml")
+	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	_ = viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Fprintln(os.Stderr, err, "Ignoring.")
+	} else {
+		fmt.Fprintln(os.Stdout, "Using config file:", viper.ConfigFileUsed())
+	}
 }

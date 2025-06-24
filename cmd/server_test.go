@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
 func TestServerCommandDefined(t *testing.T) {
+	viper.SetConfigFile("config.yaml")
+	_ = viper.ReadInConfig()
 	if serverCmd == nil {
 		t.Fatal("serverCmd should be defined")
 	}
