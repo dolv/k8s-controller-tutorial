@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	kubeconfig string
-	namespace  string
+	listKubeconfig string
+	listNamespace  string
 )
 
 var listCmd = &cobra.Command{
@@ -22,13 +22,13 @@ var listCmd = &cobra.Command{
 	Short: "List Kubernetes deployments in the arbitrary namespace",
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Debug().Msg("Listing resources")
-		clientset, err := getKubeClient(kubeconfig)
+		clientset, err := getKubeClient(listKubeconfig)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create Kubernetes client")
 			os.Exit(1)
 		}
 
-		deployments, err := clientset.AppsV1().Deployments(namespace).List(context.Background(), metav1.ListOptions{})
+		deployments, err := clientset.AppsV1().Deployments(listKubeconfig).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to list deployments")
 			os.Exit(1)
@@ -43,7 +43,7 @@ var listCmd = &cobra.Command{
 		}
 		log.Debug().
 			Strs("deployments", deploymentNames).
-			Msgf("Found %d deployments in '%s' namespace.", len(deployments.Items), namespace)
+			Msgf("Found %d deployments in '%s' namespace.", len(deployments.Items), listKubeconfig)
 	},
 }
 
@@ -57,6 +57,6 @@ func getKubeClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-	listCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
-	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Kubernetes namespace to use")
+	listCmd.Flags().StringVar(&listKubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
+	rootCmd.PersistentFlags().StringVarP(&listKubeconfig, "namespace", "n", "default", "Kubernetes namespace to use")
 }

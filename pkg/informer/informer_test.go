@@ -92,7 +92,7 @@ func TestStartDeploymentInformer_CoversFunction(t *testing.T) {
 
 	// Run StartDeploymentInformer in a goroutine
 	go func() {
-		StartDeploymentInformer(ctx, clientset)
+		StartDeploymentInformer(ctx, clientset, "default")
 	}()
 
 	// Give the informer some time to start and process events

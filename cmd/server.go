@@ -21,6 +21,7 @@ var (
 	serverPort       int
 	serverKubeconfig string
 	serverInCluster  bool
+	serverNamespace  string
 )
 
 const (
@@ -100,4 +101,5 @@ func init() {
 	serverCmd.Flags().IntVar(&serverPort, "port", 8080, "Port to run the server on")
 	serverCmd.Flags().StringVar(&serverKubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	serverCmd.Flags().BoolVar(&serverInCluster, "in-cluster", false, "Use in-cluster Kubernetes config")
+	rootCmd.PersistentFlags().StringVarP(&serverNamespace, "namespace", "n", "default", "Kubernetes namespace to use")
 }

@@ -13,12 +13,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// StartDeploymentInformer starts a shared informer for Deployments in the default namespace.
-func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientset) {
+// StartDeploymentInformer starts a shared informer for Deployments in the <serverNamespace> namespace.
+func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientset, serverNamespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		clientset,
 		30*time.Second,
-		informers.WithNamespace("default"),
+		informers.WithNamespace(serverNamespace),
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.Everything().String()
 		}),
