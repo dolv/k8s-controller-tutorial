@@ -31,6 +31,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		fmt.Println(args)
 		configureLogger(config.ResolveLogLevel(cmd))
 		log.Info().
 			Msgf("Logger initialized with effective log-level=%s", viper.GetString("log-level"))
@@ -116,10 +117,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&kubeconfigPath, "kubeconfig", "k", "", "Path to the kubeconfig file")
 
 	// Config file (config.yaml in cwd)
-	viper.SetConfigName("config")
+	viper.SetConfigName("config.yaml")
+	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	if err := viper.ReadInConfig(); err != nil {
-		fmt.Fprintln(os.Stderr, err, "Config file used:", viper.ConfigFileUsed())
-		os.Exit(1)
+		fmt.Fprintln(os.Stderr, err, "Ignoring.")
+	} else {
+		fmt.Fprintln(os.Stdout, "Using config file:", viper.ConfigFileUsed())
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	cfgPkg "github.com/dolv/k8s-controller-tutorial/internal/config"
 	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -14,7 +15,6 @@ import (
 	"github.com/valyala/fasthttp"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -52,7 +52,11 @@ func getServerKubeClient(kubeconfigPath string, inCluster bool) (*kubernetes.Cli
 	if inCluster {
 		config, err = rest.InClusterConfig()
 	} else {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		config, err = cfgPkg.GetKubeConfig(kubeconfigPath)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to build kubeconfig rest object")
+			os.Exit(1)
+		}
 	}
 	if err != nil {
 		return nil, err

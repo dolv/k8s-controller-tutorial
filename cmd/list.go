@@ -5,26 +5,23 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dolv/k8s-controller-tutorial/internal/utils"
+	cfgPkg "github.com/dolv/k8s-controller-tutorial/internal/config"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List Kubernetes deployments in the arbitrary namespace",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Debug().Msg("Obtain k8s clientset")
-		path, err := utils.ExpandPath(kubeconfigPath)
+		kubeconfig, err := cfgPkg.GetKubeConfig(kubeconfigPath)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to expand kubeconfig path")
+			log.Error().Err(err).Msg("Failed to build kubeconfig rest object")
 			os.Exit(1)
 		}
-		log.Debug().Msgf("Resolved kubeconfig path: %s", path)
-		clientset, err := getKubeClient(path)
+		clientset, err := kubernetes.NewForConfig(kubeconfig)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create Kubernetes client")
 			os.Exit(1)
@@ -48,14 +45,6 @@ var listCmd = &cobra.Command{
 			Strs("deployments", deploymentNames).
 			Msgf("Found %d deployments in '%s' namespace.", len(deployments.Items), namespace)
 	},
-}
-
-func getKubeClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		return nil, err
-	}
-	return kubernetes.NewForConfig(config)
 }
 
 func init() {
