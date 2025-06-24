@@ -91,21 +91,28 @@ go run main.go --log-level debug --kubeconfig ~/.kube/config list
 ```
 
 **What it does:**
-- Connects to the Kubernetes cluster using the provided kubeconfig file.
-- Lists all deployments in the `default` namespace and prints their names.
+- `list` command:
+    - Connects to the Kubernetes cluster using the provided kubeconfig file.
+    - Lists all deployments in the namespace provided as `--namespace` command line argument (`default` by default) and prints their names.
+- `server` command:
+    - Connects to the Kubernetes cluster using the provided kubeconfig file or in-cluster config.
+    - Watches for Deployment events (add, update, delete) in the namespace provided as `--namespace` command line argument (`default` by default) and logs them.
 
 ---
 
 ## Project Structure
 
+
+- `.github/workflows/` — GitHub Actions workflows for CI/CD.
+- `charts/app` - helm chart
 - `cmd/` — Contains your CLI commands.
+    - `cmd/server.go` - fasthttp server
+    - `cmd/list.go` - list cli command
+- `pkg/informer` - informer implementation
+- `pkg/testutil` - envtest kit
 - `main.go` — Entry point for your application.
-- `server.go` - fasthttp server
 - `Makefile` — Build automation tasks.
 - `Dockerfile` — Distroless Dockerfile for secure containerization.
-- `.github/workflows/` — GitHub Actions workflows for CI/CD.
-- `list.go` - list cli command
-- `charts/app` - helm chart
 
 ## License
 
