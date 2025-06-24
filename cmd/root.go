@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	logLevel   string
-	myVar      string
-	appVersion = "dev"
+	logLevel       string
+	namespace      string
+	kubeconfigPath string
+	appVersion     = "dev"
 )
 
 var rootCmd = &cobra.Command{
@@ -43,9 +44,6 @@ to quickly create a Cobra application.
 		log.Warn().Msg("This is a warn log")
 		log.Error().Msg("This is an error log")
 		fmt.Println("Welcome to k8s-controller-tutorial CLI!")
-		log.Info().
-			Str("myVar", myVar).
-			Msg("Received flag value")
 	},
 }
 
@@ -114,7 +112,8 @@ func init() {
 	viper.SetDefault("log-level", "info")
 
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Set log level: trace, debug, info, warn, error")
-	rootCmd.PersistentFlags().StringVar(&myVar, "myvar", "default", "Set myvar: any string")
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Kubernetes namespace to use")
+	rootCmd.PersistentFlags().StringVarP(&kubeconfigPath, "kubeconfig", "k", "~/.kube/config", "Path to the kubeconfig file")
 
 	// Config file (config.yaml in cwd)
 	viper.SetConfigName("config")
