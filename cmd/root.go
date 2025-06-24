@@ -118,5 +118,8 @@ func init() {
 	// Config file (config.yaml in cwd)
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
-	_ = viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Fprintln(os.Stderr, err, "Config file used:", viper.ConfigFileUsed())
+		os.Exit(1)
+	}
 }
