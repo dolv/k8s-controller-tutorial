@@ -74,7 +74,7 @@ var serverCmd = &cobra.Command{
 		}
 		ctx := context.Background()
 		log.Trace().Msg("Starting Informer")
-		go informer.StartDeploymentInformer(ctx, clientset)
+		go informer.StartDeploymentInformer(ctx, clientset, serverNamespace)
 		log.Trace().Msg("Getting handler instance")
 		handler := func(ctx *fasthttp.RequestCtx) {
 			reqLogger, ok := ctx.UserValue(loggerKey).(zerolog.Logger)

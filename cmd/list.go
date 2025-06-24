@@ -58,5 +58,5 @@ func getKubeClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
 func init() {
 	rootCmd.AddCommand(listCmd)
 	listCmd.Flags().StringVar(&listKubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
-	rootCmd.PersistentFlags().StringVarP(&listKubeconfig, "namespace", "n", "default", "Kubernetes namespace to use")
+	listCmd.PersistentFlags().StringVarP(&listKubeconfig, "namespace", "n", "default", "Kubernetes namespace to use")
 }
