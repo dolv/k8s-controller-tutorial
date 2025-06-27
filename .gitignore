@@ -10,6 +10,8 @@ controller
 # Build directories
 /build/
 /bin/
+/kubebuilder/
+/etcd/
 
 # Output
 *.coverprofile
