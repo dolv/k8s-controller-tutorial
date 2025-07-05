@@ -11,7 +11,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// resetCreateDeploymentCmd resets the command to its initial state
+func resetCreateDeploymentCmd() {
+	createDeploymentCmd.ResetFlags()
+	createDeploymentCmd.ResetCommands()
+	createDeploymentCmd.SetArgs([]string{})
+	// Re-add the flags that were set in init()
+	createDeploymentCmd.Flags().Int32VarP(&replicas, "replicas", "r", 1, "Number of replicas for the deployment")
+	createDeploymentCmd.Flags().StringVarP(&image, "image", "i", "nginx", "Docker image for the deployment")
+}
+
 func TestCreateDeploymentCmd_Integration(t *testing.T) {
+	resetCreateDeploymentCmd()
+	
 	viper.SetConfigFile("config.yaml")
 	_ = viper.ReadInConfig()
 	_, clientset, cleanup := testutil.SetupEnv(t)
@@ -42,6 +54,8 @@ func TestCreateDeploymentCmd_Integration(t *testing.T) {
 }
 
 func TestCreateDeploymentCmd_MissingArgs(t *testing.T) {
+	resetCreateDeploymentCmd()
+	
 	createDeploymentCmd.SetArgs([]string{})
 	err := createDeploymentCmd.Execute()
 	require.Error(t, err)
