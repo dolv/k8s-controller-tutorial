@@ -79,9 +79,11 @@ git commit -m "step4: add fasthttp server command with port flag"
 This step introduces the Makefile for build automation, a distroless Dockerfile for secure containerization, a GitHub workflow for CI/CD, and initial test coverage to ensure code quality and deployment readiness.
 
 ---
-## Step 6: List Kubernetes Deployments with client-go
+## Step 6: List/Create/Delete Kubernetes Deployments with client-go
 
 - Added a new `list` command using [k8s.io/client-go](https://github.com/kubernetes/client-go).
+- Added a new `create` command using [k8s.io/client-go](https://github.com/kubernetes/client-go).
+- Added a new `delete` command using [k8s.io/client-go](https://github.com/kubernetes/client-go).
 - Lists deployments in the namespace provided as `--namespace` command line argument (`default` by default).
 - Supports a `--kubeconfig` flag to specify the kubeconfig file for authentication.
 - Supports a `--namespace`,`-n` flag to specify the namespace for the operation.
@@ -160,6 +162,27 @@ This project uses [envtest](https://book.kubebuilder.io/reference/envtest.html) 
 3. **Notes:**
    - The envtest cluster only exists while the test is running. Once the test finishes, the API server is shut down and the kubeconfig is no longer valid.
    - You can adjust the sleep duration in `TestStartDeploymentInformer` if you need more or less time for inspection.
+
+---
+## /deployments JSON API Endpoint
+
+- Added a `/deployments` endpoint to the FastHTTP server.
+- Returns a JSON array of deployment names from the informer's cache (default namespace).
+- Uses the informer's local cache, not a live API call.
+
+**Usage:**
+```sh
+git switch feature/step8-api-handler
+
+go run main.go --log-level trace --kubeconfig ~/.kube/config server
+
+curl http://localhost:8080/deployments
+# Output: ["deployment1","deployment2",...]
+```
+
+**What it does:**
+- Serves a JSON array of deployment names currently in the informer cache.
+- Does not query the Kubernetes API directly for each request (fast, efficient).
 
 ---
 
