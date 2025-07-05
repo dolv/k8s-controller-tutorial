@@ -29,13 +29,12 @@ func TestCreateDeploymentCmd_Integration(t *testing.T) {
 	_, clientset, cleanup := testutil.SetupEnv(t)
 	defer cleanup()
 
+	// Set global variables that the create command uses
 	namespace = "default"
 	kubeconfigPath = "/tmp/envtest.kubeconfig"
 	name := "my-deployment"
 	createDeploymentCmd.SetArgs([]string{
 		name,
-		"--kubeconfig", kubeconfigPath,
-		"--namespace", namespace,
 		"--replicas", fmt.Sprint(replicas),
 		"--image", image,
 	})
