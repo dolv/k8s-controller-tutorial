@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
+
+var deploymentInformer cache.SharedIndexInformer
 
 // StartDeploymentInformer starts a shared informer for Deployments in the <serverNamespace> namespace.
 func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientset, serverNamespace string) {
@@ -24,17 +27,22 @@ func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientse
 		}),
 	)
 	log.Debug().Msg("Creating Informer instance")
-	informer := factory.Apps().V1().Deployments().Informer()
+	deploymentInformer = factory.Apps().V1().Deployments().Informer()
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			log.Info().Msgf("Deployment added: %s", getDeploymentName(obj))
+			name := getDeploymentName(obj)
+			log.Info().Msgf("Deployment added: %s", name)
+			log.Debug().Msgf("Cache now contains %d deployments", len(GetDeploymentNames()))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			log.Info().Msgf("Deployment updated: %s", getDeploymentName(newObj))
+			name := getDeploymentName(newObj)
+			log.Info().Msgf("Deployment updated: %s", name)
 		},
 		DeleteFunc: func(obj interface{}) {
-			log.Info().Msgf("Deployment deleted: %s", getDeploymentName(obj))
+			name := getDeploymentName(obj)
+			log.Info().Msgf("Deployment deleted: %s", name)
+			log.Debug().Msgf("Cache now contains %d deployments", len(GetDeploymentNames()))
 		},
 	})
 
@@ -48,6 +56,22 @@ func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientse
 	}
 	log.Info().Msg("Deployment informer cache synced. Watching for events...")
 	<-ctx.Done() // Block until context is cancelled
+}
+
+// GetDeploymentNames returns a slice of deployment names from the informer's cache.
+func GetDeploymentNames() []string {
+	var names []string
+	if deploymentInformer == nil {
+		log.Warn().Msg("Deployment informer is nil, returning empty list")
+		return names
+	}
+	for _, obj := range deploymentInformer.GetStore().List() {
+		if d, ok := obj.(*appsv1.Deployment); ok {
+			names = append(names, d.Name)
+		}
+	}
+	log.Debug().Msgf("Found %d deployments in cache", len(names))
+	return names
 }
 
 func getDeploymentName(obj any) string {
