@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/dolv/k8s-controller-tutorial/internal/config"
+	"github.com/dolv/k8s-controller-tutorial/internal/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,7 +44,7 @@ var createDeploymentCmd = &cobra.Command{
 				Namespace: namespace,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: int32Ptr(replicas),
+				Replicas: utils.Int32Ptr(replicas),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": name},
 				},
@@ -63,8 +64,6 @@ var createDeploymentCmd = &cobra.Command{
 		fmt.Printf("Deployment '%s' created in namespace '%s'!\n", name, namespace)
 	},
 }
-
-func int32Ptr(i int32) *int32 { return &i }
 
 func init() {
 	createDeploymentCmd.Flags().Int32VarP(&replicas, "replicas", "r", 1, "Number of replicas for the deployment")

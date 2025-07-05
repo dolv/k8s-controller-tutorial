@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"github.com/dolv/k8s-controller-tutorial/internal/utils"
 )
 
 // SetupEnv starts envtest, creates a clientset, populates the cluster with sample Deployments, and returns env, clientset, and cleanup.
@@ -58,7 +59,7 @@ func SetupEnv(t *testing.T) (*envtest.Environment, *kubernetes.Clientset, func()
 				Namespace: "default",
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: int32Ptr(1),
+				Replicas: utils.Int32Ptr(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": "test"},
 				},
@@ -77,5 +78,3 @@ func SetupEnv(t *testing.T) (*envtest.Environment, *kubernetes.Clientset, func()
 	}
 	return env, clientset, cleanup
 }
-
-func int32Ptr(i int32) *int32 { return &i }

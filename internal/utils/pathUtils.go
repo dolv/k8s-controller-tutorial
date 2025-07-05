@@ -23,3 +23,6 @@ func ExpandPath(path string) (string, error) {
 	}
 	return path, nil
 }
+
+// Int32Ptr returns a pointer to the given int32 value.
+func Int32Ptr(i int32) *int32 { return &i }
