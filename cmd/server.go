@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cfgPkg "github.com/dolv/k8s-controller-tutorial/internal/config"
+	"github.com/dolv/k8s-controller-tutorial/pkg/ctrl"
 	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -15,6 +16,8 @@ import (
 	"github.com/valyala/fasthttp"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	ctrlruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
@@ -79,6 +82,25 @@ var serverCmd = &cobra.Command{
 		ctx := context.Background()
 		log.Trace().Msg("Starting Informer")
 		go informer.StartDeploymentInformer(ctx, clientset, namespace)
+
+		// Start controller-runtime manager and controller
+		mgr, err := ctrlruntime.NewManager(ctrlruntime.GetConfigOrDie(), manager.Options{})
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create controller-runtime manager")
+			os.Exit(1)
+		}
+		if err := ctrl.AddDeploymentController(mgr); err != nil {
+			log.Error().Err(err).Msg("Failed to add deployment controller")
+			os.Exit(1)
+		}
+		go func() {
+			log.Info().Msg("Starting controller-runtime manager...")
+			if err := mgr.Start(cmd.Context()); err != nil {
+				log.Error().Err(err).Msg("Manager exited with error")
+				os.Exit(1)
+			}
+		}()
+
 		log.Trace().Msg("Getting handler instance")
 		handler := func(ctx *fasthttp.RequestCtx) {
 			logger, ok := ctx.UserValue(loggerKey).(zerolog.Logger)
