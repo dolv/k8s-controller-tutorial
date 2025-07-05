@@ -16,7 +16,7 @@ func GetKubeConfig(kubeconfigPath string) (*rest.Config, error) {
 		log.Error().Err(err).Msg("Failed to expand kubeconfig path")
 		os.Exit(1)
 	}
-	log.Debug().Msgf("Resolved kubeconfig path: %s", path)
+	log.Debug().Msgf("Expanded kubeconfig path string: %s", path)
 	config, err := clientcmd.BuildConfigFromFlags("", path)
 	if err != nil {
 		return nil, err

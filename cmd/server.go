@@ -33,6 +33,7 @@ func loggingMiddleware(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 		start := time.Now()
 		requestID := uuid.New().String()
 		ctx.SetUserValue(requestIDKey, requestID)
+		ctx.Response.Header.Set("X-Request-ID", requestID)
 		next(ctx)
 		duration := time.Since(start)
 		log.Debug().
@@ -55,7 +56,7 @@ func getServerKubeClient(kubeconfigPath string, inCluster bool) (*kubernetes.Cli
 		config, err = cfgPkg.GetKubeConfig(kubeconfigPath)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to build kubeconfig rest object")
-			os.Exit(1)
+			return nil, err
 		}
 	}
 	if err != nil {
@@ -80,13 +81,34 @@ var serverCmd = &cobra.Command{
 		go informer.StartDeploymentInformer(ctx, clientset, namespace)
 		log.Trace().Msg("Getting handler instance")
 		handler := func(ctx *fasthttp.RequestCtx) {
-			reqLogger, ok := ctx.UserValue(loggerKey).(zerolog.Logger)
+			logger, ok := ctx.UserValue(loggerKey).(zerolog.Logger)
 			if !ok {
-				reqLogger = log.Logger
+				logger = log.Logger
 			}
-			reqLogger.Trace().Msg("Handler entered")
-			fmt.Fprintf(ctx, "Hello from FastHTTP! Your request ID: %s", ctx.UserValue(requestIDKey))
-			reqLogger.Trace().Msg("Handler exiting")
+			logger.Trace().Msg("Handler entered")
+			switch string(ctx.Path()) {
+			case "/deployments":
+				logger.Info().Msg("Deployments request received")
+				ctx.Response.Header.Set("Content-Type", "application/json")
+				deployments := informer.GetDeploymentNames()
+				logger.Info().Msgf("Deployments: %v", deployments)
+				ctx.SetStatusCode(200)
+				ctx.Write([]byte("["))
+				for i, name := range deployments {
+					ctx.WriteString("\"")
+					ctx.WriteString(name)
+					ctx.WriteString("\"")
+					if i < len(deployments)-1 {
+						ctx.WriteString(",")
+					}
+				}
+				ctx.Write([]byte("]"))
+				return
+			default:
+				logger.Info().Msg("Default request received")
+				fmt.Fprintf(ctx, "Hello from FastHTTP! Your request ID: %s", ctx.UserValue(requestIDKey))
+			}
+			logger.Trace().Msg("Handler exiting")
 		}
 		log.Trace().Msg("Adding loggingMiddleware to handler instance")
 		wrappedHandler := loggingMiddleware(handler)
