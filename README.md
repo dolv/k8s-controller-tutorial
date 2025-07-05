@@ -204,7 +204,7 @@ go run main.go --log-level trace --kubeconfig  ~/.kube/config server
 ```
 
 ---
-# Leader Election and Metrics for Controller Manager
+## Step 10: Leader Election and Metrics for Controller Manager
 
 - Added leader election support using a Lease resource (enabled by default, can be disabled with a flag).
 - Added a flag to set the metrics port for the controller manager.
