@@ -56,7 +56,7 @@ func getServerKubeClient(kubeconfigPath string, inCluster bool) (*kubernetes.Cli
 		config, err = cfgPkg.GetKubeConfig(kubeconfigPath)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to build kubeconfig rest object")
-			os.Exit(1)
+			return nil, err
 		}
 	}
 	if err != nil {
