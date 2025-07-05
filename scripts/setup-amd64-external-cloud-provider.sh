@@ -272,6 +272,7 @@ start() {
                     --storage-backend=etcd3 \
                     --storage-media-type=application/json \
                     --v=0 \
+                    --cloud-provider=external \
                     --service-account-issuer=https://kubernetes.default.svc.cluster.local \
                     --service-account-key-file=/tmp/sa.pub \
                     --service-account-signing-key-file=/tmp/sa.key 
@@ -279,7 +280,7 @@ start() {
     fi
 
     if ! is_running "containerd"; then
-        sudo bash -c '
+        sudobash -c '
             {
                 echo "Starting containerd..."
                 export PATH='"$PATH"':/opt/cni/bin:kubebuilder/bin
@@ -323,6 +324,7 @@ start() {
                     --hostname-override='"$(hostname)"' \
                     --pod-infra-container-image=registry.k8s.io/pause:3.10 \
                     --node-ip='"$HOST_IP"' \
+                    --cloud-provider=external \
                     --cgroup-driver=cgroupfs \
                     --max-pods=4  \
                     --v=1
@@ -334,7 +336,7 @@ start() {
     sudo kubebuilder/bin/kubectl label node "$NODE_NAME" node-role.kubernetes.io/master="" --overwrite || true
 
     # Remove the uninitialized taint so pods can be scheduled
-    #sudo kubebuilder/bin/kubectl taint nodes "$NODE_NAME" node.cloudprovider.kubernetes.io/uninitialized:NoSchedule- || true
+    sudo kubebuilder/bin/kubectl taint nodes "$NODE_NAME" node.cloudprovider.kubernetes.io/uninitialized:NoSchedule- || true
 
     if ! is_running "kube-controller-manager"; then
         sudo bash -c '
@@ -343,6 +345,7 @@ start() {
                 PATH='"$PATH"':/opt/cni/bin:/usr/sbin kubebuilder/bin/kube-controller-manager \
                     --kubeconfig=/var/lib/kubelet/kubeconfig \
                     --leader-elect=false \
+                    --cloud-provider=external \
                     --service-cluster-ip-range=10.0.0.0/24 \
                     --cluster-name=kubernetes \
                     --root-ca-file=/var/lib/kubelet/ca.crt \

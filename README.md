@@ -162,9 +162,10 @@ This project uses [envtest](https://book.kubebuilder.io/reference/envtest.html) 
 3. **Notes:**
    - The envtest cluster only exists while the test is running. Once the test finishes, the API server is shut down and the kubeconfig is no longer valid.
    - You can adjust the sleep duration in `TestStartDeploymentInformer` if you need more or less time for inspection.
+For more details, see the code in `pkg/testutil/envtest.go` and `pkg/informer/informer_test.go`.
 
 ---
-## /deployments JSON API Endpoint
+## Step 8: /deployments JSON API Endpoint
 
 - Added a `/deployments` endpoint to the FastHTTP server.
 - Returns a JSON array of deployment names from the informer's cache (default namespace).
@@ -185,8 +186,24 @@ curl http://localhost:8080/deployments
 - Does not query the Kubernetes API directly for each request (fast, efficient).
 
 ---
+## Step 9: Controller-runtime Deployment Controller
 
-For more details, see the code in `pkg/testutil/envtest.go` and `pkg/informer/informer_test.go`.
+- Integrated [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) into the project.
+- Added a deployment controller that logs each reconcile event for Deployments in the (default namespace by default).
+- The controller is started alongside the FastHTTP server.
+
+**What it does:**
+- Uses controller-runtime's manager to run a controller for Deployments.
+- Logs every reconcile event (creation, update, deletion) for Deployments.
+
+**Usage:**
+```sh
+git switch feature/step9-controller-runtime
+
+go run main.go --log-level trace --kubeconfig  ~/.kube/config server
+```
+
+---
 
 ## Project Structure
 - `.github/workflows/` — GitHub Actions workflows for CI/CD.
