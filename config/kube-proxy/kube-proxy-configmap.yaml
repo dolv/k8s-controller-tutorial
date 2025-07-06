@@ -1,0 +1,42 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+data:
+  config.conf: |
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    kind: KubeProxyConfiguration
+    mode: "iptables"
+    clusterCIDR: "10.244.0.0/16"
+    clientConnection:
+      kubeconfig: /var/lib/kube-proxy/kubeconfig.conf
+---
+apiVersion: v1
+data:
+  kubeconfig.conf: |
+    apiVersion: v1
+    clusters:
+    - cluster:
+        insecure-skip-tls-verify: true
+        server: https://10.0.2.15:6443
+      name: test-env
+    contexts:
+    - context:
+        cluster: test-env
+        namespace: default
+        user: test-user
+      name: test-context
+    current-context: test-context
+    kind: Config
+    preferences: {}
+    users:
+    - name: test-user
+      user:
+        token: "1234567890"
+kind: ConfigMap
+metadata:
+  name: kube-proxy-kubeconfig
+  namespace: kube-system
+

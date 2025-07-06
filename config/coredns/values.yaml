@@ -1,0 +1,29 @@
+replicaCount: 1
+
+service:
+  clusterIP: "10.0.0.10"
+
+servers:
+  - zones:
+      - zone: .
+        use_tcp: true
+    port: 53
+    plugins:
+      - name: errors
+      - name: health
+      - name: ready
+      - name: kubernetes
+        parameters: cluster.local in-addr.arpa ip6.arpa
+        configBlock: |-
+          pods insecure
+          fallthrough in-addr.arpa ip6.arpa
+          ttl 30
+      - name: forward
+        parameters: . 8.8.8.8 1.1.1.1
+      - name: cache
+        parameters: 30
+      - name: loop
+      - name: reload
+      - name: loadbalance
+serviceAccount:
+  create: true

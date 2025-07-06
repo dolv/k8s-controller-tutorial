@@ -7,6 +7,10 @@ echo "Setting up Kubernetes control plane for AMD64..."
 APP_NAME="k8s-controller"
 LOG_DIR="/var/log/${APP_NAME}"
 
+HOST_IP=$(hostname -I | awk '{print $1}')
+export HOST_IP
+
+
 # Function to check if a process is running
 is_running() {
     pgrep -f "$1" >/dev/null
@@ -44,6 +48,7 @@ download_components() {
     sudo mkdir -p "${LOG_DIR}"
     sudo mkdir -p /etc/containerd/
     sudo mkdir -p /run/containerd
+
 
     # Download kubebuilder tools if not present
     if [ ! -f "kubebuilder/bin/etcd" ]; then
@@ -115,7 +120,7 @@ setup_configs() {
     # Set up kubeconfig if not already configured
     if ! sudo kubebuilder/bin/kubectl config current-context | grep -q "test-context"; then
         sudo kubebuilder/bin/kubectl config set-credentials test-user --token=1234567890
-        sudo kubebuilder/bin/kubectl config set-cluster test-env --server=https://127.0.0.1:6443 --insecure-skip-tls-verify
+        sudo kubebuilder/bin/kubectl config set-cluster test-env --server=https://127.0.0.1:6443 --certificate-authority=/tmp/ca.crt
         sudo kubebuilder/bin/kubectl config set-context test-context --cluster=test-env --user=test-user --namespace=default 
         sudo kubebuilder/bin/kubectl config use-context test-context
     fi
@@ -210,15 +215,73 @@ EOF
 
     # Generate self-signed kubelet serving certificate if not present
     if [ ! -f "/var/lib/kubelet/pki/kubelet.crt" ] || [ ! -f "/var/lib/kubelet/pki/kubelet.key" ]; then
-        echo "Generating self-signed kubelet serving certificate..."
-        sudo openssl req -x509 -newkey rsa:2048 -nodes \
-            -keyout /var/lib/kubelet/pki/kubelet.key \
-            -out /var/lib/kubelet/pki/kubelet.crt \
-            -days 365 \
-            -subj "/CN=$(hostname)"
-        sudo chmod 600 /var/lib/kubelet/pki/kubelet.key
-        sudo chmod 644 /var/lib/kubelet/pki/kubelet.crt
+    echo "Generating kubelet serving key..."
+    sudo openssl genrsa -out /var/lib/kubelet/pki/kubelet.key 2048
+
+    echo "Generating kubelet certificate signing request (CSR)..."
+    cat <<EOF > /tmp/kubelet-csr.conf
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[ alt_names ]
+DNS.1 = $(hostname)
+IP.1 = $HOST_IP
+EOF
+
+    sudo openssl req -new -key /var/lib/kubelet/pki/kubelet.key \
+        -subj "/CN=kubelet" \
+        -out /tmp/kubelet.csr \
+        -config /tmp/kubelet-csr.conf
+
+    echo "Signing kubelet certificate with cluster CA..."
+    sudo openssl x509 -req -in /tmp/kubelet.csr \
+        -CA /tmp/ca.crt -CAkey /tmp/ca.key -CAcreateserial \
+        -out /var/lib/kubelet/pki/kubelet.crt \
+        -days 365 \
+        -extensions v3_req -extfile /tmp/kubelet-csr.conf
+
+    sudo chmod 600 /var/lib/kubelet/pki/kubelet.key
+    sudo chmod 644 /var/lib/kubelet/pki/kubelet.crt
     fi
+
+
+    # Generate apiserver key
+    sudo openssl genrsa -out /tmp/apiserver.key 2048
+
+    # Create a CSR config (save as /tmp/apiserver-csr.cnf)
+    cat <<EOF > /tmp/apiserver-csr.cnf
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[ alt_names ]
+DNS.1 = kubernetes
+DNS.2 = kubernetes.default
+DNS.3 = kubernetes.default.svc
+DNS.4 = kubernetes.default.svc.cluster.local
+IP.1 = 10.0.0.1
+IP.2 = 127.0.0.1
+IP.3 = $HOST_IP
+EOF
+
+    # Generate the CSR
+    sudo openssl req -new -key /tmp/apiserver.key -subj "/CN=kube-apiserver" -out /tmp/apiserver.csr -config /tmp/apiserver-csr.cnf
+
+    # Sign the cert
+    sudo openssl x509 -req -in /tmp/apiserver.csr -CA /tmp/ca.crt -CAkey /tmp/ca.key -CAcreateserial \
+    -out /tmp/apiserver.crt -days 365 -extensions v3_req -extfile /tmp/apiserver-csr.cnf
+
 }
 
 start() {
@@ -226,8 +289,6 @@ start() {
         echo "Kubernetes components are already running"
         return 0
     fi
-
-    HOST_IP=$(hostname -I | awk '{print $1}')
     
     # Download components if needed
     download_components
@@ -274,7 +335,10 @@ start() {
                     --v=0 \
                     --service-account-issuer=https://kubernetes.default.svc.cluster.local \
                     --service-account-key-file=/tmp/sa.pub \
-                    --service-account-signing-key-file=/tmp/sa.key 
+                    --service-account-signing-key-file=/tmp/sa.key \
+                    --tls-cert-file=/tmp/apiserver.crt \
+                    --tls-private-key-file=/tmp/apiserver.key \
+                    --client-ca-file=/tmp/ca.crt
             } 2>&1 | tee '"${LOG_DIR}"'/kube-apiserver.out.log &'
     fi
 
@@ -302,7 +366,6 @@ start() {
     # Set up kubelet kubeconfig
     sudo cp /root/.kube/config /var/lib/kubelet/kubeconfig
     export KUBECONFIG=~/.kube/config
-    cp /tmp/sa.pub /tmp/ca.crt
 
     # Create service account and configmap if they don't exist
     sudo kubebuilder/bin/kubectl create sa default 2>/dev/null || true
@@ -324,7 +387,7 @@ start() {
                     --pod-infra-container-image=registry.k8s.io/pause:3.10 \
                     --node-ip='"$HOST_IP"' \
                     --cgroup-driver=cgroupfs \
-                    --max-pods=4  \
+                    --max-pods=10  \
                     --v=1
             } 2>&1 | tee '"${LOG_DIR}"'/kubelet.out.log &'
     fi
@@ -360,6 +423,13 @@ start() {
     sudo kubebuilder/bin/kubectl get all -A
     sudo kubebuilder/bin/kubectl get componentstatuses || true
     sudo kubebuilder/bin/kubectl get --raw='/readyz?verbose'
+
+    sleep 5
+    echo "Deploy Kube-Proxy..."
+    sudo kubectl apply -f config/kube-proxy/
+    sleep 10
+    echo "Deploy CoreDNS..."
+    sudo kubectl apply -f config/codedns/
 }
 
 stop() {
@@ -381,7 +451,7 @@ cleanup() {
     sudo rm -rf ./etcd
     sudo rm -rf /var/lib/kubelet/*
     sudo rm -rf /run/containerd/*
-    sudo rm -f /tmp/sa.key /tmp/sa.pub /tmp/token.csv /tmp/ca.key /tmp/ca.crt
+    sudo rm -f /tmp/sa.key /tmp/sa.pub /tmp/token.csv /tmp/ca.key /tmp/ca.crt /tmp/ca.srl /tmp/apiserver.csr /tmp/apiserver.key /tmp/apiserver.crt 
     echo "Cleanup complete"
 }
 
