@@ -23,7 +23,7 @@ func resetCreateDeploymentCmd() {
 
 func TestCreateDeploymentCmd_Integration(t *testing.T) {
 	resetCreateDeploymentCmd()
-	
+
 	viper.SetConfigFile("config.yaml")
 	_ = viper.ReadInConfig()
 	_, clientset, cleanup := testutil.SetupEnv(t)
@@ -54,7 +54,7 @@ func TestCreateDeploymentCmd_Integration(t *testing.T) {
 
 func TestCreateDeploymentCmd_MissingArgs(t *testing.T) {
 	resetCreateDeploymentCmd()
-	
+
 	createDeploymentCmd.SetArgs([]string{})
 	err := createDeploymentCmd.Execute()
 	require.Error(t, err)

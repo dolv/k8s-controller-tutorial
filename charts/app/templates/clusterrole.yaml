@@ -1,0 +1,37 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "app.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+rules:
+  # JaegerNginxProxy CRD permissions
+  - apiGroups: ["jaeger-nginx-proxy.platform-engineer.stream"]
+    resources: ["jaegernginxproxies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["jaeger-nginx-proxy.platform-engineer.stream"]
+    resources: ["jaegernginxproxies/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["jaeger-nginx-proxy.platform-engineer.stream"]
+    resources: ["jaegernginxproxies/finalizers"]
+    verbs: ["update"]
+  
+  # Deployment permissions
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # ConfigMap permissions
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  
+  # Pod permissions for status updates
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  
+  # Event permissions
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"] 

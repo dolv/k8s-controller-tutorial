@@ -1,0 +1,73 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-collector-conf
+  namespace: tracing
+data:
+  default.conf: |
+    server {
+        listen 14268;
+        location /api/traces {
+            return 200 "HTTP trace endpoint is active.";
+        }
+    }
+
+    server {
+        listen 14250 http2;
+        location /jaeger.api.v2.CollectorService/PostSpans {
+            grpc_intercept_errors on;
+            default_type application/grpc;
+            return 200;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger-collector
+  namespace: tracing
+  labels:
+    app: jaeger-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger-collector
+  template:
+    metadata:
+      labels:
+        app: jaeger-collector
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 14268
+              name: http
+            - containerPort: 14250
+              name: grpc
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: jaeger-collector-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-collector
+  namespace: tracing
+spec:
+  selector:
+    app: jaeger-collector
+  ports:
+    - name: http
+      port: 14268
+      targetPort: 14268
+    - name: grpc
+      port: 14250
+      targetPort: 14250
+  type: ClusterIP

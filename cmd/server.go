@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cfgPkg "github.com/dolv/k8s-controller-tutorial/internal/config"
+	jaegernginxproxyv1alpha0 "github.com/dolv/k8s-controller-tutorial/pkg/apis/jaeger-nginx-proxy/v1alpha0"
 	"github.com/dolv/k8s-controller-tutorial/pkg/ctrl"
 	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
 	"github.com/google/uuid"
@@ -17,18 +18,18 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrlruntime "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 var (
-	serverPort       int
-	serverMetricsPort int
-	serverKubeconfig string
-	serverInCluster  bool
-	serverEnableLeaderElection bool
+	serverPort                    int
+	serverMetricsPort             int
+	serverKubeconfig              string
+	serverInCluster               bool
+	serverEnableLeaderElection    bool
 	serverLeaderElectionNamespace string
 )
 
@@ -92,7 +93,7 @@ var serverCmd = &cobra.Command{
 
 		// Start controller-runtime manager and controller
 		log.Trace().Msg("Starting Controller-runtime manager")
-		
+
 		// Use the same kubeconfig as the server client
 		var mgrConfig *rest.Config
 		if serverInCluster {
@@ -104,22 +105,33 @@ var serverCmd = &cobra.Command{
 			log.Error().Err(err).Msg("Failed to get kubeconfig for controller-runtime manager")
 			os.Exit(1)
 		}
-		
+
 		mgr, err := ctrlruntime.NewManager(mgrConfig, manager.Options{
-				LeaderElection:          serverEnableLeaderElection,
-				LeaderElectionID:        "k8s-controllers-leader-election",
-				LeaderElectionNamespace: serverLeaderElectionNamespace,
-				Metrics:                 server.Options{BindAddress: fmt.Sprintf(":%d", serverMetricsPort)},
-			},
+			LeaderElection:          serverEnableLeaderElection,
+			LeaderElectionID:        "jaeger-nginx-proxy-controller-leader-election",
+			LeaderElectionNamespace: serverLeaderElectionNamespace,
+			Metrics:                 server.Options{BindAddress: fmt.Sprintf(":%d", serverMetricsPort)},
+		},
 		)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create controller-runtime manager")
 			os.Exit(1)
 		}
-		if err := ctrl.AddDeploymentController(mgr); err != nil {
-			log.Error().Err(err).Msg("Failed to add deployment controller")
+
+		// Register the JaegerNginxProxy CRD scheme
+		if err := jaegernginxproxyv1alpha0.AddToScheme(mgr.GetScheme()); err != nil {
+			log.Error().Err(err).Msg("Failed to add JaegerNginxProxy scheme")
 			os.Exit(1)
 		}
+
+		// Add the JaegerNginxProxy controller
+		if err := ctrl.AddJaegerNginxProxyController(mgr); err != nil {
+			log.Error().Err(err).Msg("Failed to add JaegerNginxProxy controller")
+			os.Exit(1)
+		}
+
+		// Webhook registration is handled automatically by kubebuilder markers
+
 		go func() {
 			log.Info().Msg("Starting controller-runtime manager...")
 			if err := mgr.Start(cmd.Context()); err != nil {
