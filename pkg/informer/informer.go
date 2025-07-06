@@ -41,74 +41,74 @@ func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientse
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldDep, oldOk := oldObj.(*appsv1.Deployment)
 			newDep, newOk := newObj.(*appsv1.Deployment)
-			
+
 			if !oldOk || !newOk {
 				log.Info().Msgf("[INFORMER][Update] Deployment updated: %s (type conversion failed)", getDeploymentName(newObj))
 				return
 			}
-			
+
 			name := getDeploymentName(newObj)
 			changes := []string{}
-			
+
 			// Compare replicas
 			if oldDep.Spec.Replicas != nil && newDep.Spec.Replicas != nil {
 				if *oldDep.Spec.Replicas != *newDep.Spec.Replicas {
 					changes = append(changes, fmt.Sprintf("replicas: %d -> %d", *oldDep.Spec.Replicas, *newDep.Spec.Replicas))
 				}
 			}
-			
+
 			// Compare image
 			if len(oldDep.Spec.Template.Spec.Containers) > 0 && len(newDep.Spec.Template.Spec.Containers) > 0 {
 				if oldDep.Spec.Template.Spec.Containers[0].Image != newDep.Spec.Template.Spec.Containers[0].Image {
-					changes = append(changes, fmt.Sprintf("image: %s -> %s", 
-						oldDep.Spec.Template.Spec.Containers[0].Image, 
+					changes = append(changes, fmt.Sprintf("image: %s -> %s",
+						oldDep.Spec.Template.Spec.Containers[0].Image,
 						newDep.Spec.Template.Spec.Containers[0].Image))
 				}
 			}
-			
+
 			// Compare labels
 			if !reflect.DeepEqual(oldDep.Labels, newDep.Labels) {
 				changes = append(changes, "labels changed")
 			}
-			
+
 			// Compare annotations
 			if !reflect.DeepEqual(oldDep.Annotations, newDep.Annotations) {
 				changes = append(changes, "annotations changed")
 			}
-			
+
 			// Check if it's just a status update
 			if len(changes) == 0 {
 				statusChanges := []string{}
 				if oldDep.Status.Replicas != newDep.Status.Replicas {
-					statusChanges = append(statusChanges, 
+					statusChanges = append(statusChanges,
 						fmt.Sprintf("status.replicas: %d -> %d", oldDep.Status.Replicas, newDep.Status.Replicas))
 				}
 				if oldDep.Status.AvailableReplicas != newDep.Status.AvailableReplicas {
-					statusChanges = append(statusChanges, 
+					statusChanges = append(statusChanges,
 						fmt.Sprintf("status.availableReplicas: %d -> %d", oldDep.Status.AvailableReplicas, newDep.Status.AvailableReplicas))
 				}
 				if oldDep.Status.UpdatedReplicas != newDep.Status.UpdatedReplicas {
-					statusChanges = append(statusChanges, 
+					statusChanges = append(statusChanges,
 						fmt.Sprintf("status.updatedReplicas: %d -> %d", oldDep.Status.UpdatedReplicas, newDep.Status.UpdatedReplicas))
 				}
 				if oldDep.Status.ReadyReplicas != newDep.Status.ReadyReplicas {
-					statusChanges = append(statusChanges, 
+					statusChanges = append(statusChanges,
 						fmt.Sprintf("status.readyReplicas: %d -> %d", oldDep.Status.ReadyReplicas, newDep.Status.ReadyReplicas))
 				}
 				if oldDep.Status.UnavailableReplicas != newDep.Status.UnavailableReplicas {
-					statusChanges = append(statusChanges, 
+					statusChanges = append(statusChanges,
 						fmt.Sprintf("status.unavailableReplicas: %d -> %d", oldDep.Status.UnavailableReplicas, newDep.Status.UnavailableReplicas))
 				}
 				// Add more status fields as needed
 				if len(statusChanges) > 0 {
-					log.Info().Msgf("[INFORMER][Update] Deployment status updated: %s - Changes: %s", 
+					log.Info().Msgf("[INFORMER][Update] Deployment status updated: %s - Changes: %s",
 						name, strings.Join(statusChanges, ", "))
 				} else {
-					log.Info().Msgf("[INFORMER][Update] Deployment status updated: %s (generation: %d -> %d)", 
+					log.Info().Msgf("[INFORMER][Update] Deployment status updated: %s (generation: %d -> %d)",
 						name, oldDep.Generation, newDep.Generation)
 				}
 			} else {
-				log.Info().Msgf("[INFORMER][Update] Deployment updated: %s - Changes: %s", 
+				log.Info().Msgf("[INFORMER][Update] Deployment updated: %s - Changes: %s",
 					name, strings.Join(changes, ", "))
 			}
 		},

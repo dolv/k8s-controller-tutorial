@@ -226,19 +226,186 @@ go run main.go server --enable-leader-election=false --metrics-port=9090
 ```
 ---
 
+## Step 11: JaegerNginxProxy CRD, Controller, and Webhook Implementation
+
+- Added the Go type for the JaegerNginxProxy custom resource in `pkg/apis/jaeger-nginx-proxy/v1alpha1/resource.go`.
+- Created `groupversion_info.go` to define the group, version, and scheme for the CRD.
+- Used [controller-gen](https://github.com/kubernetes-sigs/controller-tools) to generate CRD manifests and deepcopy code.
+- Implemented a controller for the JaegerNginxProxy CRD using controller-runtime in `pkg/ctrl/JaegerNginxProxy_controller.go`.
+- The controller watches JaegerNginxProxy resources and manages both a Deployment and a ConfigMap:
+  - Creates/updates a ConfigMap containing the `spec.contents` from the JaegerNginxProxy CR.
+  - Creates/updates a Deployment that mounts the ConfigMap as a volume and uses the image/replicas from the CR spec.
+  - Cleans up both the Deployment and ConfigMap when the JaegerNginxProxy is deleted.
+- Registered and started the controller with the manager in `cmd/server.go`:
+
+```go
+      mgr, err := ctrlruntime.NewManager(mgrConfig, manager.Options{
+			LeaderElection:          serverEnableLeaderElection,
+			LeaderElectionID:        "jaeger-nginx-proxy-controller-leader-election",
+			LeaderElectionNamespace: serverLeaderElectionNamespace,
+			Metrics:                 server.Options{BindAddress: fmt.Sprintf(":%d", serverMetricsPort)},
+		},
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create controller-runtime manager")
+			os.Exit(1)
+		}
+```
+- **Custom Resource Definition (CRD):** Defines the `JaegerNginxProxy` resource for declarative management of NGINX proxies for Jaeger collectors.
+- **Controller:** Watches `JaegerNginxProxy` resources and ensures a Deployment and ConfigMap are created/updated/deleted as needed. Handles status updates reflecting the health of the managed resources.
+- **Validating Webhook:** Ensures that only valid `JaegerNginxProxy` resources are admitted by the Kubernetes API server. Performs deep validation of the spec and generated NGINX config.
+
+
+**What it does:**
+- Defines the JaegerNginxProxy CRD structure and registers it with the Kubernetes API machinery.
+- Generates the CRD YAML and deepcopy methods required for Kubernetes controllers.
+- Reconciles JaegerNginxProxy resources to ensure a matching Deployment and ConfigMap exist in the cluster.
+- Updates the Deployment and ConfigMap if the JaegerNginxProxy spec changes.
+- Handles creation, update, and cleanup logic for Deployments and ConfigMaps owned by JaegerNginxProxy resources.
+- **CRD:**
+  - Lets you define a Jaeger NGINX proxy declaratively, including upstreams, ports, image, resources, etc.
+- **Controller:**
+  - Reconciles the desired state (from the CR) with the actual state in the cluster.
+  - Manages a Deployment (NGINX) and a ConfigMap (nginx config) for each CR instance.
+  - Updates the CR status to reflect readiness and error messages.
+- **Webhook:**
+  - Validates new and updated CRs for required fields, port uniqueness, valid port numbers, image fields, and that the generated NGINX config is syntactically valid.
+  - Rejects invalid resources before they are persisted.
+
+### CRD Schema (Example)
+
+```yaml
+apiVersion: jaeger-nginx-proxy.platform-engineer.stream/v1alpha0
+kind: JaegerNginxProxy
+metadata:
+  name: test-proxy
+spec:
+  replicaCount: 2
+  containerPort: 8080
+  image:
+    repository: nginx
+    tag: "1.21"
+    pullPolicy: IfNotPresent
+  upstream:
+    collectorHost: jaeger-collector.tracing.svc.cluster.local
+  ports:
+    - name: http
+      port: 14268
+      path: /api/traces
+    - name: grpc
+      port: 14250
+      path: /jaeger.api.v2.CollectorService/PostSpans
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+```
+
+**Usage:**
+```sh
+git switch feature/step11-jaeger-proxy-crd 
+# Add Go types and group version info for JaegerNginxProxy (done already)
+# (edit pkg/apis/jaeger-nginx-proxy/v1alpha0/resource.go and groupversion_info.go) (done already)
+
+# install controller-gen binary in your $GOPATH/bin (usually ~/go/bin) 
+go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+export PATH=$PATH:$(go env GOPATH)/bin
+# Run controller-gen to generate CRD and deepcopy code
+controller-gen crd:crdVersions=v1 paths=./pkg/apis/... output:crd:dir=./config/crd object paths=./pkg/apis/...
+
+# Scaffold and implement the advanced JaegerNginxProxy controller
+# created pkg/ctrl/JaegerNginxProxy_controller.go and implemented controller logic for Deployment and ConfigMap management
+# registered the controller in cmd/server.go
+
+# Run the server to start the controller
+go run main.go --log-level trace --kubeconfig  ~/.kube/config server
+```
+
+### Running Tests
+
+This project uses [envtest](https://book.kubebuilder.io/reference/envtest.html) and controller-runtime for integration and controller tests.
+
+### Prerequisites
+- Go (see go.mod for version)
+- Make
+- The `setup-envtest` binary (automatically handled by the Makefile)
+- CRD YAMLs present in `config/crd/`
+
+
+### How to Run
+
+1. **Generate CRD and Webhook Manifests:**
+   ```sh
+   make generate manifests
+   # or manually:
+   controller-gen crd:crdVersions=v1 paths=./pkg/apis/... output:crd:dir=./config/crd object paths=./pkg/apis/...
+   controller-gen webhook paths=./pkg/apis/... output:webhook:dir=./config/webhook
+   ```
+2. **Deploy CRD to Cluster:**
+   ```sh
+   kubectl apply -f config/crd/
+   ```
+3. **Run the Controller (with webhook server):**
+   - Locally:
+     ```sh
+     make run
+     # or
+     go run main.go --log-level trace --kubeconfig ~/.kube/config server
+     ```
+   - In-cluster: Deploy the controller Deployment and Service (see Helm chart or manifests).
+4. **Create a JaegerNginxProxy resource:**
+   ```sh
+   kubectl apply -f examples/jaegernginxproxy.yaml
+   ```
+5. **Check status and managed resources:**
+   ```sh
+   kubectl get jaegernginxproxies
+   kubectl describe jaegernginxproxy <name>
+   kubectl get deployment,cm
+   ```
+
+### Webhook Details
+
+- **Type:** Validating Admission Webhook
+- **Path:** `/validate-jaeger-nginx-proxy-platform-engineer-stream-v1alpha0-jaegernginxproxy`
+- **Operations:** create, update
+- **Validation performed:**
+  - Required fields (replicaCount, image, ports, etc.)
+  - Port uniqueness and valid ranges
+  - Image fields are non-empty
+  - Resources (CPU/memory) are set
+  - NGINX config can be generated and passes basic validation
+- **Failure Policy:** fail (invalid CRs are rejected)
+- **How it is wired:** Registered with the controller-runtime manager in the main application. The webhook server is started automatically when running the controller.
+
 ## Project Structure
+
 - `.github/workflows/` — GitHub Actions workflows for CI/CD.
-- `charts/app` - helm chart
-- `cmd/` — Contains your CLI commands.
-    - `cmd/server.go` - fasthttp server
-    - `cmd/list.go` - list cli command
-- `pkg/informer` - informer implementation
-- `pkg/testutil` - envtest kit
-- `main.go` — Entry point for your application.
-- `Makefile` — Build automation tasks.
-- `Dockerfile` — Distroless Dockerfile for secure containerization.
+- `charts/app` — Helm chart for deployment
+- `cmd/` — CLI commands
+    - `cmd/server.go` — FastHTTP server
+    - `cmd/list.go` — List CLI command
+    - `cmd/delete.go` — Delete CLI command
+    - `cmd/create.go` — Create CLI command
+- `config/crd/` — CRD definitions
+- `config/webhook/` — Webhook configuration manifests
+- `pkg/apis/` — CRD Go types and deepcopy
+- `pkg/ctrl/` — Controller logic (reconcilers)
+- `pkg/informer/` — Informer implementation
+- `pkg/testutil/` — envtest kit
+- `pkg/webhook/` — Webhook implementation (validation logic)
+- `main.go` — Entry point
+- `Makefile` — Build automation
+- `Dockerfile` — Distroless Dockerfile
+
+---
+
 
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
-

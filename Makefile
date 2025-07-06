@@ -47,13 +47,24 @@ test-coverage: envtest
 	gocover-cobertura < coverage.out > coverage.xml
 
 run:
-	go run main.go
+	go run main.go $(ARGS)
+
+server:
+	go run main.go server $(ARGS)
 
 docker-build:
 	docker build --build-arg VERSION=$(VERSION) -t $(APP):latest .
 
 clean:
 	rm -f $(APP)
+
+# Generate Go code (deepcopy, defaulters, conversion, webhook)
+generate:
+	controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./pkg/apis/..." webhook paths="./pkg/apis/..."
+
+# Generate CRD and webhook manifests
+manifests:
+	controller-gen crd:crdVersions=v1 paths="./pkg/apis/..." output:crd:dir=./config/crd webhook paths="./pkg/apis/..." output:webhook:dir=./config/webhook
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

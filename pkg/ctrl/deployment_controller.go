@@ -50,22 +50,22 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if previous != nil {
 		eventType = "[CONTROLLER][Update]"
-		
+
 		// Compare meaningful fields
 		if previous.Spec.Replicas != nil && dep.Spec.Replicas != nil {
 			if *previous.Spec.Replicas != *dep.Spec.Replicas {
 				changes = append(changes, fmt.Sprintf("replicas: %d -> %d", *previous.Spec.Replicas, *dep.Spec.Replicas))
 			}
 		}
-		
+
 		if len(previous.Spec.Template.Spec.Containers) > 0 && len(dep.Spec.Template.Spec.Containers) > 0 {
 			if previous.Spec.Template.Spec.Containers[0].Image != dep.Spec.Template.Spec.Containers[0].Image {
-				changes = append(changes, fmt.Sprintf("image: %s -> %s", 
-					previous.Spec.Template.Spec.Containers[0].Image, 
+				changes = append(changes, fmt.Sprintf("image: %s -> %s",
+					previous.Spec.Template.Spec.Containers[0].Image,
 					dep.Spec.Template.Spec.Containers[0].Image))
 			}
 		}
-		
+
 		if previous.Generation != dep.Generation {
 			changes = append(changes, fmt.Sprintf("generation: %d -> %d", previous.Generation, dep.Generation))
 		}
@@ -80,13 +80,13 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	r.mutex.Unlock()
 
 	if len(changes) > 0 {
-		log.Info().Msgf("%s Deployment reconciled: %s/%s - Changes: %s", 
+		log.Info().Msgf("%s Deployment reconciled: %s/%s - Changes: %s",
 			eventType, req.Namespace, req.Name, strings.Join(changes, ", "))
 	} else {
-		log.Info().Msgf("%s Deployment reconciled: %s/%s (no spec changes)", 
+		log.Info().Msgf("%s Deployment reconciled: %s/%s (no spec changes)",
 			eventType, req.Namespace, req.Name)
 	}
-	
+
 	return ctrl.Result{}, nil
 }
 

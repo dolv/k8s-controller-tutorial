@@ -1,0 +1,30 @@
+apiVersion: jaeger-nginx-proxy.platform-engineer.stream/v1alpha0
+kind: JaegerNginxProxy
+metadata:
+  name: test-proxy
+  namespace: default
+spec:
+  replicaCount: 2
+  containerPort: 8080
+  image:
+    repository: nginx
+    tag: "1.21"
+    pullPolicy: IfNotPresent
+  upstream:
+    collectorHost: "jaeger-collector.tracing.svc.cluster.local"
+  ports:
+    - name: "http"
+      port: 14268
+      path: "/api/traces"
+    - name: "grpc"
+      port: 14250
+      path: "/jaeger.api.v2.CollectorService/PostSpans"
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi" 

@@ -1,8 +1,8 @@
 package testutil
 
 import (
-	"testing"
 	"github.com/dolv/k8s-controller-tutorial/internal/utils"
+	"testing"
 )
 
 func TestInt32Ptr(t *testing.T) {

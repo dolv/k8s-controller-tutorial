@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/dolv/k8s-controller-tutorial/internal/utils"
 	"github.com/dolv/k8s-controller-tutorial/pkg/testutil"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"github.com/dolv/k8s-controller-tutorial/internal/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // resetDeleteCmd resets the delete command to its initial state
@@ -63,4 +63,4 @@ func TestDeleteDeploymentCmd_Integration(t *testing.T) {
 	// Verify the deployment is gone
 	_, err = clientset.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	require.Error(t, err)
-} 
+}
