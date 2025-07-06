@@ -239,10 +239,17 @@ go run main.go server --enable-leader-election=false --metrics-port=9090
 - Registered and started the controller with the manager in `cmd/server.go`:
 
 ```go
-if err := ctrl.SetupJaegerNginxProxyController(mgr); err != nil {
-    log.Error().Err(err).Msg("Failed to add JaegerNginxProxy controller")
-    os.Exit(1)
-}
+      mgr, err := ctrlruntime.NewManager(mgrConfig, manager.Options{
+			LeaderElection:          serverEnableLeaderElection,
+			LeaderElectionID:        "jaeger-nginx-proxy-controller-leader-election",
+			LeaderElectionNamespace: serverLeaderElectionNamespace,
+			Metrics:                 server.Options{BindAddress: fmt.Sprintf(":%d", serverMetricsPort)},
+		},
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create controller-runtime manager")
+			os.Exit(1)
+		}
 ```
 - **Custom Resource Definition (CRD):** Defines the `JaegerNginxProxy` resource for declarative management of NGINX proxies for Jaeger collectors.
 - **Controller:** Watches `JaegerNginxProxy` resources and ensures a Deployment and ConfigMap are created/updated/deleted as needed. Handles status updates reflecting the health of the managed resources.
