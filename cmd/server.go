@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cfgPkg "github.com/dolv/k8s-controller-tutorial/internal/config"
+	"github.com/dolv/k8s-controller-tutorial/pkg/api"
 	jaegernginxproxyv1alpha0 "github.com/dolv/k8s-controller-tutorial/pkg/apis/jaeger-nginx-proxy/v1alpha0"
 	"github.com/dolv/k8s-controller-tutorial/pkg/ctrl"
 	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
@@ -15,9 +16,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttprouter"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrlruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -143,6 +146,18 @@ var serverCmd = &cobra.Command{
 		// Set up controller-runtime logging
 		ctrlruntimelog.SetLogger(zap.New(zap.UseDevMode(true)))
 
+		// --- API ROUTER SETUP ---
+		// Import here to avoid import cycle in code edit
+		jaegerapi := requireJaegerNginxProxyAPI(mgr.GetClient(), namespace)
+		router := requireFasthttprouter()
+		// JaegerNginxProxy API endpoints
+		router.GET("/api/jaegernginxproxies", adaptHandler(jaegerapi.ListJaegerNginxProxies))
+		router.GET("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.GetJaegerNginxProxy))
+		router.POST("/api/jaegernginxproxies", adaptHandler(jaegerapi.CreateJaegerNginxProxy))
+		router.PUT("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.UpdateJaegerNginxProxy))
+		router.DELETE("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.DeleteJaegerNginxProxy))
+		// --- END API ROUTER SETUP ---
+
 		log.Trace().Msg("Getting handler instance")
 		handler := func(ctx *fasthttp.RequestCtx) {
 			logger, ok := ctx.UserValue(loggerKey).(zerolog.Logger)
@@ -150,6 +165,13 @@ var serverCmd = &cobra.Command{
 				logger = log.Logger
 			}
 			logger.Trace().Msg("Handler entered")
+			// API router takes precedence
+			if router != nil {
+				router.Handler(ctx)
+				if ctx.Response.StatusCode() != 0 {
+					return
+				}
+			}
 			switch string(ctx.Path()) {
 			case "/deployments":
 				logger.Info().Msg("Deployments request received")
@@ -184,6 +206,33 @@ var serverCmd = &cobra.Command{
 		}
 	},
 }
+
+// --- Helper functions for API router wiring ---
+func requireJaegerNginxProxyAPI(k8sClient client.Client, ns string) *api.JaegerNginxProxyAPI {
+	return &api.JaegerNginxProxyAPI{
+		K8sClient: k8sClient,
+		Namespace: ns,
+	}
+}
+
+func requireFasthttprouter() *fasthttprouter.Router {
+	// Import here to avoid import cycle in code edit
+	return fasthttprouter.New()
+}
+
+func adaptHandler(h func(ctx *fasthttp.RequestCtx)) fasthttprouter.Handle {
+	return func(ctx *fasthttp.RequestCtx, _ fasthttprouter.Params) {
+		h(ctx)
+	}
+}
+
+// --- End helper functions ---
+// API endpoints:
+//   GET    /api/jaegernginxproxies         - List all JaegerNginxProxy resources
+//   GET    /api/jaegernginxproxies/:name   - Get a JaegerNginxProxy by name
+//   POST   /api/jaegernginxproxies         - Create a JaegerNginxProxy
+//   PUT    /api/jaegernginxproxies/:name   - Update a JaegerNginxProxy
+//   DELETE /api/jaegernginxproxies/:name   - Delete a JaegerNginxProxy
 
 func init() {
 	rootCmd.AddCommand(serverCmd)

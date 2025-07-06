@@ -9,6 +9,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/valyala/fasthttp v1.50.0
+	github.com/valyala/fasthttprouter v0.0.0-20160217050331-24073dd8f323
 	k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver v0.33.0
 	k8s.io/apimachinery v0.33.2
