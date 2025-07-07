@@ -23,7 +23,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ENVTEST_VERSION ?= release-0.19
 
 format:
-	gofmt -s -w ./
+	gofmt -s -w $$(find . \( -path ./vendor -o -path ./etcd \) -prune -o -type f -name '*.go' -print)
 
 lint:
 	golint

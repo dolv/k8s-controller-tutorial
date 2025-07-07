@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cfgPkg "github.com/dolv/k8s-controller-tutorial/internal/config"
+	"github.com/dolv/k8s-controller-tutorial/pkg/api"
 	jaegernginxproxyv1alpha0 "github.com/dolv/k8s-controller-tutorial/pkg/apis/jaeger-nginx-proxy/v1alpha0"
 	"github.com/dolv/k8s-controller-tutorial/pkg/ctrl"
 	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
@@ -15,9 +16,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttprouter"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrlruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -89,7 +92,12 @@ var serverCmd = &cobra.Command{
 		ctx := context.Background()
 
 		log.Trace().Msg("Starting Informer")
-		go informer.StartDeploymentInformer(ctx, clientset, namespace)
+		// Use namespaces parameter if provided, otherwise fall back to namespace
+		namespaceToWatch := namespace
+		if namespaces != "" {
+			namespaceToWatch = namespaces
+		}
+		go informer.StartDeploymentInformer(ctx, clientset, namespaceToWatch)
 
 		// Start controller-runtime manager and controller
 		log.Trace().Msg("Starting Controller-runtime manager")
@@ -143,6 +151,23 @@ var serverCmd = &cobra.Command{
 		// Set up controller-runtime logging
 		ctrlruntimelog.SetLogger(zap.New(zap.UseDevMode(true)))
 
+		// --- API ROUTER SETUP ---
+		// Import here to avoid import cycle in code edit
+		jaegerapi := requireJaegerNginxProxyAPI(mgr.GetClient(), namespace)
+		router := requireFasthttprouter()
+		// JaegerNginxProxy API endpoints
+		router.GET("/api/jaegernginxproxies", adaptHandler(jaegerapi.ListJaegerNginxProxies))
+		router.GET("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.GetJaegerNginxProxy))
+		router.POST("/api/jaegernginxproxies", adaptHandler(jaegerapi.CreateJaegerNginxProxy))
+		router.PUT("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.UpdateJaegerNginxProxy))
+		router.PATCH("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.PatchJaegerNginxProxy))
+		router.DELETE("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.DeleteJaegerNginxProxy))
+		// Swagger documentation endpoints
+		router.GET("/docs/swagger.json", adaptHandler(serveSwaggerJSON))
+		router.GET("/swagger", adaptHandler(serveSwaggerUI))
+		router.GET("/swagger/", adaptHandler(serveSwaggerUI))
+		// --- END API ROUTER SETUP ---
+
 		log.Trace().Msg("Getting handler instance")
 		handler := func(ctx *fasthttp.RequestCtx) {
 			logger, ok := ctx.UserValue(loggerKey).(zerolog.Logger)
@@ -150,28 +175,59 @@ var serverCmd = &cobra.Command{
 				logger = log.Logger
 			}
 			logger.Trace().Msg("Handler entered")
-			switch string(ctx.Path()) {
-			case "/deployments":
+
+			// Check for /deployments endpoint first (before router)
+			if string(ctx.Path()) == "/deployments" {
 				logger.Info().Msg("Deployments request received")
 				ctx.Response.Header.Set("Content-Type", "application/json")
-				deployments := informer.GetDeploymentNames()
-				logger.Info().Msgf("Deployments: %v", deployments)
-				ctx.SetStatusCode(200)
-				ctx.Write([]byte("["))
-				for i, name := range deployments {
-					ctx.WriteString("\"")
-					ctx.WriteString(name)
-					ctx.WriteString("\"")
-					if i < len(deployments)-1 {
-						ctx.WriteString(",")
+
+				// Check if user wants to see deployments with namespace info
+				queryArgs := ctx.QueryArgs()
+				if queryArgs.Has("with-namespace") {
+					deployments := informer.GetDeploymentNamesWithNamespace()
+					logger.Info().Msgf("Deployments with namespace: %v", deployments)
+					ctx.SetStatusCode(200)
+					ctx.Write([]byte("["))
+					for i, deployment := range deployments {
+						ctx.WriteString("{\"name\":\"")
+						ctx.WriteString(deployment["name"])
+						ctx.WriteString("\",\"namespace\":\"")
+						ctx.WriteString(deployment["namespace"])
+						ctx.WriteString("\"}")
+						if i < len(deployments)-1 {
+							ctx.WriteString(",")
+						}
 					}
+					ctx.Write([]byte("]"))
+				} else {
+					deployments := informer.GetDeploymentNames()
+					logger.Info().Msgf("Deployments: %v", deployments)
+					ctx.SetStatusCode(200)
+					ctx.Write([]byte("["))
+					for i, name := range deployments {
+						ctx.WriteString("\"")
+						ctx.WriteString(name)
+						ctx.WriteString("\"")
+						if i < len(deployments)-1 {
+							ctx.WriteString(",")
+						}
+					}
+					ctx.Write([]byte("]"))
 				}
-				ctx.Write([]byte("]"))
 				return
-			default:
-				logger.Info().Msg("Default request received")
-				fmt.Fprintf(ctx, "Hello from FastHTTP! Your request ID: %s", ctx.UserValue(requestIDKey))
 			}
+
+			// API router takes precedence for all other routes
+			if router != nil {
+				router.Handler(ctx)
+				if ctx.Response.StatusCode() != 0 {
+					return
+				}
+			}
+
+			// Default handler for unmatched routes
+			logger.Info().Msg("Default request received")
+			fmt.Fprintf(ctx, "Hello from FastHTTP! Your request ID: %s", ctx.UserValue(requestIDKey))
 			logger.Trace().Msg("Handler exiting")
 		}
 		log.Trace().Msg("Adding loggingMiddleware to handler instance")
@@ -184,6 +240,75 @@ var serverCmd = &cobra.Command{
 		}
 	},
 }
+
+// --- Helper functions for API router wiring ---
+func requireJaegerNginxProxyAPI(k8sClient client.Client, ns string) *api.JaegerNginxProxyAPI {
+	return &api.JaegerNginxProxyAPI{
+		K8sClient: k8sClient,
+		Namespace: ns,
+	}
+}
+
+func requireFasthttprouter() *fasthttprouter.Router {
+	// Import here to avoid import cycle in code edit
+	return fasthttprouter.New()
+}
+
+func adaptHandler(h func(ctx *fasthttp.RequestCtx)) fasthttprouter.Handle {
+	return func(ctx *fasthttp.RequestCtx, ps fasthttprouter.Params) {
+		// Set URL parameters in the context so they can be accessed via ctx.UserValue
+		for _, param := range ps {
+			ctx.SetUserValue(param.Key, param.Value)
+		}
+		h(ctx)
+	}
+}
+
+// --- End helper functions ---
+
+// serveSwaggerJSON serves the generated swagger.json file
+func serveSwaggerJSON(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
+	ctx.Response.Header.Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	ctx.Response.Header.Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Read the swagger.json file
+	swaggerData, err := os.ReadFile("docs/swagger.json")
+	if err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetBodyString(`{"error":"Failed to read swagger.json"}`)
+		return
+	}
+
+	ctx.SetBody(swaggerData)
+}
+
+// serveSwaggerUI serves the Swagger UI HTML page
+func serveSwaggerUI(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
+
+	// Read the swagger/index.html file
+	swaggerHTML, err := os.ReadFile("swagger/index.html")
+	if err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetBodyString(`<html><body><h1>Error</h1><p>Failed to read swagger UI</p></body></html>`)
+		return
+	}
+
+	ctx.SetBody(swaggerHTML)
+}
+
+// API endpoints:
+//   GET    /api/jaegernginxproxies         - List all JaegerNginxProxy resources
+//   GET    /api/jaegernginxproxies/:name   - Get a JaegerNginxProxy by name
+//   POST   /api/jaegernginxproxies         - Create a JaegerNginxProxy
+//   PUT    /api/jaegernginxproxies/:name   - Update a JaegerNginxProxy (full update)
+//   PATCH  /api/jaegernginxproxies/:name   - Patch a JaegerNginxProxy (partial update)
+//   DELETE /api/jaegernginxproxies/:name   - Delete a JaegerNginxProxy
+//   GET    /deployments                    - List deployment names from informer cache
+//   GET    /docs/swagger.json              - Get Swagger JSON specification
+//   GET    /swagger                        - Get Swagger UI
 
 func init() {
 	rootCmd.AddCommand(serverCmd)

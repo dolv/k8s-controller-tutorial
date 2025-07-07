@@ -17,6 +17,7 @@ import (
 var (
 	logLevel       string
 	namespace      string
+	namespaces     string
 	kubeconfigPath string
 	appVersion     = "dev"
 )
@@ -115,6 +116,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Set log level: trace, debug, info, warn, error")
 	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Kubernetes namespace to use")
+	rootCmd.PersistentFlags().StringVar(&namespaces, "namespaces", "", "Comma-separated list of Kubernetes namespaces to watch (overrides --namespace)")
 	rootCmd.PersistentFlags().StringVarP(&kubeconfigPath, "kubeconfig", "k", "", "Path to the kubeconfig file")
 
 	// Config file (config.yaml in cwd)

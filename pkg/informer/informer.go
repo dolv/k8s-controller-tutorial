@@ -17,18 +17,62 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-var deploymentInformer cache.SharedIndexInformer
+var (
+	deploymentInformer cache.SharedIndexInformer
+	allowedNamespaces  map[string]bool
+)
 
-// StartDeploymentInformer starts a shared informer for Deployments in the <serverNamespace> namespace.
+// StartDeploymentInformer starts a shared informer for Deployments in the specified namespaces.
+// serverNamespace can be:
+// - "all" or empty: watch all namespaces
+// - "default": watch only default namespace
+// - "ns1,ns2,ns3": watch specific comma-separated namespaces
 func StartDeploymentInformer(ctx context.Context, clientset *kubernetes.Clientset, serverNamespace string) {
-	factory := informers.NewSharedInformerFactoryWithOptions(
-		clientset,
-		30*time.Second,
-		informers.WithNamespace(serverNamespace),
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.Everything().String()
-		}),
-	)
+	var factory informers.SharedInformerFactory
+
+	if serverNamespace == "" || serverNamespace == "all" {
+		// Watch all namespaces
+		factory = informers.NewSharedInformerFactoryWithOptions(
+			clientset,
+			30*time.Second,
+			informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+				options.FieldSelector = fields.Everything().String()
+			}),
+		)
+		log.Info().Msg("Starting deployment informer for ALL namespaces")
+	} else if strings.Contains(serverNamespace, ",") {
+		// Watch multiple specific namespaces
+		namespaceList := strings.Split(serverNamespace, ",")
+		// Trim whitespace from each namespace
+		for i, ns := range namespaceList {
+			namespaceList[i] = strings.TrimSpace(ns)
+		}
+		log.Info().Msgf("Starting deployment informer for namespaces: %v", namespaceList)
+
+		// For multiple namespaces, we need to create separate informers
+		// This is a limitation of the informer factory - it can only watch one namespace at a time
+		// So we'll create a factory without namespace restriction and filter in our handlers
+		factory = informers.NewSharedInformerFactoryWithOptions(
+			clientset,
+			30*time.Second,
+			informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+				options.FieldSelector = fields.Everything().String()
+			}),
+		)
+		// Store the allowed namespaces for filtering
+		setAllowedNamespaces(namespaceList)
+	} else {
+		// Watch specific single namespace
+		factory = informers.NewSharedInformerFactoryWithOptions(
+			clientset,
+			30*time.Second,
+			informers.WithNamespace(serverNamespace),
+			informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+				options.FieldSelector = fields.Everything().String()
+			}),
+		)
+		log.Info().Msgf("Starting deployment informer for namespace: %s", serverNamespace)
+	}
 	log.Debug().Msg("Creating Informer instance")
 	deploymentInformer = factory.Apps().V1().Deployments().Informer()
 
@@ -140,11 +184,50 @@ func GetDeploymentNames() []string {
 	}
 	for _, obj := range deploymentInformer.GetStore().List() {
 		if d, ok := obj.(*appsv1.Deployment); ok {
-			names = append(names, d.Name)
+			if isNamespaceAllowed(d.Namespace) {
+				names = append(names, d.Name)
+			}
 		}
 	}
 	log.Debug().Msgf("Found %d deployments in cache", len(names))
 	return names
+}
+
+// setAllowedNamespaces sets the list of namespaces that should be included in results
+func setAllowedNamespaces(namespaces []string) {
+	allowedNamespaces = make(map[string]bool)
+	for _, ns := range namespaces {
+		allowedNamespaces[ns] = true
+	}
+}
+
+// isNamespaceAllowed checks if a namespace is in the allowed list
+func isNamespaceAllowed(namespace string) bool {
+	if allowedNamespaces == nil {
+		return true // If no restrictions, allow all
+	}
+	return allowedNamespaces[namespace]
+}
+
+// GetDeploymentNamesWithNamespace returns a slice of deployment names with their namespaces from the informer's cache.
+func GetDeploymentNamesWithNamespace() []map[string]string {
+	var deployments []map[string]string
+	if deploymentInformer == nil {
+		log.Warn().Msg("Deployment informer is nil, returning empty list")
+		return deployments
+	}
+	for _, obj := range deploymentInformer.GetStore().List() {
+		if d, ok := obj.(*appsv1.Deployment); ok {
+			if isNamespaceAllowed(d.Namespace) {
+				deployments = append(deployments, map[string]string{
+					"name":      d.Name,
+					"namespace": d.Namespace,
+				})
+			}
+		}
+	}
+	log.Debug().Msgf("Found %d deployments in cache", len(deployments))
+	return deployments
 }
 
 func getDeploymentName(obj any) string {
