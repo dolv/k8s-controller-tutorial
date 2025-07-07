@@ -92,7 +92,12 @@ var serverCmd = &cobra.Command{
 		ctx := context.Background()
 
 		log.Trace().Msg("Starting Informer")
-		go informer.StartDeploymentInformer(ctx, clientset, namespace)
+		// Use namespaces parameter if provided, otherwise fall back to namespace
+		namespaceToWatch := namespace
+		if namespaces != "" {
+			namespaceToWatch = namespaces
+		}
+		go informer.StartDeploymentInformer(ctx, clientset, namespaceToWatch)
 
 		// Start controller-runtime manager and controller
 		log.Trace().Msg("Starting Controller-runtime manager")
@@ -170,35 +175,59 @@ var serverCmd = &cobra.Command{
 				logger = log.Logger
 			}
 			logger.Trace().Msg("Handler entered")
-			// API router takes precedence
+
+			// Check for /deployments endpoint first (before router)
+			if string(ctx.Path()) == "/deployments" {
+				logger.Info().Msg("Deployments request received")
+				ctx.Response.Header.Set("Content-Type", "application/json")
+
+				// Check if user wants to see deployments with namespace info
+				queryArgs := ctx.QueryArgs()
+				if queryArgs.Has("with-namespace") {
+					deployments := informer.GetDeploymentNamesWithNamespace()
+					logger.Info().Msgf("Deployments with namespace: %v", deployments)
+					ctx.SetStatusCode(200)
+					ctx.Write([]byte("["))
+					for i, deployment := range deployments {
+						ctx.WriteString("{\"name\":\"")
+						ctx.WriteString(deployment["name"])
+						ctx.WriteString("\",\"namespace\":\"")
+						ctx.WriteString(deployment["namespace"])
+						ctx.WriteString("\"}")
+						if i < len(deployments)-1 {
+							ctx.WriteString(",")
+						}
+					}
+					ctx.Write([]byte("]"))
+				} else {
+					deployments := informer.GetDeploymentNames()
+					logger.Info().Msgf("Deployments: %v", deployments)
+					ctx.SetStatusCode(200)
+					ctx.Write([]byte("["))
+					for i, name := range deployments {
+						ctx.WriteString("\"")
+						ctx.WriteString(name)
+						ctx.WriteString("\"")
+						if i < len(deployments)-1 {
+							ctx.WriteString(",")
+						}
+					}
+					ctx.Write([]byte("]"))
+				}
+				return
+			}
+
+			// API router takes precedence for all other routes
 			if router != nil {
 				router.Handler(ctx)
 				if ctx.Response.StatusCode() != 0 {
 					return
 				}
 			}
-			switch string(ctx.Path()) {
-			case "/deployments":
-				logger.Info().Msg("Deployments request received")
-				ctx.Response.Header.Set("Content-Type", "application/json")
-				deployments := informer.GetDeploymentNames()
-				logger.Info().Msgf("Deployments: %v", deployments)
-				ctx.SetStatusCode(200)
-				ctx.Write([]byte("["))
-				for i, name := range deployments {
-					ctx.WriteString("\"")
-					ctx.WriteString(name)
-					ctx.WriteString("\"")
-					if i < len(deployments)-1 {
-						ctx.WriteString(",")
-					}
-				}
-				ctx.Write([]byte("]"))
-				return
-			default:
-				logger.Info().Msg("Default request received")
-				fmt.Fprintf(ctx, "Hello from FastHTTP! Your request ID: %s", ctx.UserValue(requestIDKey))
-			}
+
+			// Default handler for unmatched routes
+			logger.Info().Msg("Default request received")
+			fmt.Fprintf(ctx, "Hello from FastHTTP! Your request ID: %s", ctx.UserValue(requestIDKey))
 			logger.Trace().Msg("Handler exiting")
 		}
 		log.Trace().Msg("Adding loggingMiddleware to handler instance")
@@ -277,6 +306,7 @@ func serveSwaggerUI(ctx *fasthttp.RequestCtx) {
 //   PUT    /api/jaegernginxproxies/:name   - Update a JaegerNginxProxy (full update)
 //   PATCH  /api/jaegernginxproxies/:name   - Patch a JaegerNginxProxy (partial update)
 //   DELETE /api/jaegernginxproxies/:name   - Delete a JaegerNginxProxy
+//   GET    /deployments                    - List deployment names from informer cache
 //   GET    /docs/swagger.json              - Get Swagger JSON specification
 //   GET    /swagger                        - Get Swagger UI
 
