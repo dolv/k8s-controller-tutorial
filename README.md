@@ -383,6 +383,55 @@ This project uses [envtest](https://book.kubebuilder.io/reference/envtest.html) 
 - **Failure Policy:** fail (invalid CRs are rejected)
 - **How it is wired:** Registered with the controller-runtime manager in the main application. The webhook server is started automatically when running the controller.
 
+
+---
+## Step 12: Added API and Swagger API Documentation
+
+- Integrated [Swagger/OpenAPI](https://swagger.io/) documentation for the REST API endpoints.
+- Added interactive API documentation with Swagger UI.
+- Generated OpenAPI specification from Go code annotations.
+
+**What it provides:**
+- Interactive API documentation at `/swagger`
+- OpenAPI JSON specification at `/docs/swagger.json`
+- Auto-generated documentation from Go code comments
+- Try-it-out functionality for testing API endpoints
+
+**Usage:**
+```sh
+# Start the server
+go run main.go server --port 8080
+
+# Access Swagger UI
+open http://localhost:8080/swagger
+
+# Get OpenAPI specification
+curl http://localhost:8080/docs/swagger.json
+```
+
+**Available API Endpoints:**
+- `GET /api/jaegernginxproxies` - List all JaegerNginxProxy resources
+- `GET /api/jaegernginxproxies/{name}` - Get a JaegerNginxProxy by name
+- `POST /api/jaegernginxproxies` - Create a new JaegerNginxProxy
+- `PUT /api/jaegernginxproxies/{name}` - Update an existing JaegerNginxProxy
+- `DELETE /api/jaegernginxproxies/{name}` - Delete a JaegerNginxProxy
+
+**Regenerating Documentation:**
+```sh
+# Install swag command
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# Generate documentation
+swag init -g main.go
+```
+
+**Files Created:**
+- `docs/docs.go` - Generated Go code for Swagger
+- `docs/swagger.json` - OpenAPI specification in JSON format
+- `docs/swagger.yaml` - OpenAPI specification in YAML format
+- `swagger/index.html` - Swagger UI interface
+- `swagger/README.md` - Documentation for the Swagger integration
+
 ## Project Structure
 
 - `.github/workflows/` — GitHub Actions workflows for CI/CD.
@@ -394,11 +443,18 @@ This project uses [envtest](https://book.kubebuilder.io/reference/envtest.html) 
     - `cmd/create.go` — Create CLI command
 - `config/crd/` — CRD definitions
 - `config/webhook/` — Webhook configuration manifests
+- `docs/` — Documentation
+    - `docs/docs.go` — Generated Go code for Swagger
+    - `docs/swagger.json` — OpenAPI specification in JSON format
+    - `docs/swagger.yaml` — OpenAPI specification in YAML format
 - `pkg/apis/` — CRD Go types and deepcopy
 - `pkg/ctrl/` — Controller logic (reconcilers)
 - `pkg/informer/` — Informer implementation
 - `pkg/testutil/` — envtest kit
 - `pkg/webhook/` — Webhook implementation (validation logic)
+- `swagger/` — Swagger UI and documentation
+    - `swagger/index.html` — Swagger UI interface
+    - `swagger/README.md` — Documentation for the Swagger integration
 - `main.go` — Entry point
 - `Makefile` — Build automation
 - `Dockerfile` — Distroless Dockerfile

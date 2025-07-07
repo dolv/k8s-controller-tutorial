@@ -155,7 +155,12 @@ var serverCmd = &cobra.Command{
 		router.GET("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.GetJaegerNginxProxy))
 		router.POST("/api/jaegernginxproxies", adaptHandler(jaegerapi.CreateJaegerNginxProxy))
 		router.PUT("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.UpdateJaegerNginxProxy))
+		router.PATCH("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.PatchJaegerNginxProxy))
 		router.DELETE("/api/jaegernginxproxies/:name", adaptHandler(jaegerapi.DeleteJaegerNginxProxy))
+		// Swagger documentation endpoints
+		router.GET("/docs/swagger.json", adaptHandler(serveSwaggerJSON))
+		router.GET("/swagger", adaptHandler(serveSwaggerUI))
+		router.GET("/swagger/", adaptHandler(serveSwaggerUI))
 		// --- END API ROUTER SETUP ---
 
 		log.Trace().Msg("Getting handler instance")
@@ -221,18 +226,59 @@ func requireFasthttprouter() *fasthttprouter.Router {
 }
 
 func adaptHandler(h func(ctx *fasthttp.RequestCtx)) fasthttprouter.Handle {
-	return func(ctx *fasthttp.RequestCtx, _ fasthttprouter.Params) {
+	return func(ctx *fasthttp.RequestCtx, ps fasthttprouter.Params) {
+		// Set URL parameters in the context so they can be accessed via ctx.UserValue
+		for _, param := range ps {
+			ctx.SetUserValue(param.Key, param.Value)
+		}
 		h(ctx)
 	}
 }
 
 // --- End helper functions ---
+
+// serveSwaggerJSON serves the generated swagger.json file
+func serveSwaggerJSON(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
+	ctx.Response.Header.Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	ctx.Response.Header.Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Read the swagger.json file
+	swaggerData, err := os.ReadFile("docs/swagger.json")
+	if err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetBodyString(`{"error":"Failed to read swagger.json"}`)
+		return
+	}
+
+	ctx.SetBody(swaggerData)
+}
+
+// serveSwaggerUI serves the Swagger UI HTML page
+func serveSwaggerUI(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
+
+	// Read the swagger/index.html file
+	swaggerHTML, err := os.ReadFile("swagger/index.html")
+	if err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetBodyString(`<html><body><h1>Error</h1><p>Failed to read swagger UI</p></body></html>`)
+		return
+	}
+
+	ctx.SetBody(swaggerHTML)
+}
+
 // API endpoints:
 //   GET    /api/jaegernginxproxies         - List all JaegerNginxProxy resources
 //   GET    /api/jaegernginxproxies/:name   - Get a JaegerNginxProxy by name
 //   POST   /api/jaegernginxproxies         - Create a JaegerNginxProxy
-//   PUT    /api/jaegernginxproxies/:name   - Update a JaegerNginxProxy
+//   PUT    /api/jaegernginxproxies/:name   - Update a JaegerNginxProxy (full update)
+//   PATCH  /api/jaegernginxproxies/:name   - Patch a JaegerNginxProxy (partial update)
 //   DELETE /api/jaegernginxproxies/:name   - Delete a JaegerNginxProxy
+//   GET    /docs/swagger.json              - Get Swagger JSON specification
+//   GET    /swagger                        - Get Swagger UI
 
 func init() {
 	rootCmd.AddCommand(serverCmd)

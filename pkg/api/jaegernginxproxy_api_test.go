@@ -14,6 +14,7 @@ import (
 	myctrl "github.com/dolv/k8s-controller-tutorial/pkg/ctrl"
 	"github.com/dolv/k8s-controller-tutorial/pkg/testutil"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttprouter"
@@ -227,4 +228,85 @@ func TestJaegerNginxProxyAPI_E2E(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+func TestJaegerNginxProxyAPI_PatchPartialUpdate(t *testing.T) {
+	// Create a test API instance
+	api := &JaegerNginxProxyAPI{
+		K8sClient: nil, // We'll mock this
+		Namespace: "default",
+	}
+
+	// Create a mock existing object
+	existing := &jaegerv1alpha0.JaegerNginxProxy{
+		Spec: jaegerv1alpha0.JaegerNginxProxySpec{
+			ReplicaCount:  2,
+			ContainerPort: 8080,
+			Image: jaegerv1alpha0.Image{
+				Repository: "nginx",
+				Tag:        "1.21",
+				PullPolicy: "IfNotPresent",
+			},
+			Resources: jaegerv1alpha0.Resources{
+				Limits:   jaegerv1alpha0.Resource{CPU: "500m", Memory: "512Mi"},
+				Requests: jaegerv1alpha0.Resource{CPU: "100m", Memory: "128Mi"},
+			},
+		},
+	}
+
+	// Test patch data - only update replicaCount
+	patchData := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"replicaCount": float64(5),
+		},
+	}
+
+	// Apply the patch
+	err := api.applyPartialSpecUpdate(existing, patchData)
+	require.NoError(t, err)
+
+	// Verify only replicaCount was updated
+	assert.Equal(t, 5, existing.Spec.ReplicaCount)
+	assert.Equal(t, 8080, existing.Spec.ContainerPort)       // Should remain unchanged
+	assert.Equal(t, "nginx", existing.Spec.Image.Repository) // Should remain unchanged
+	assert.Equal(t, "1.21", existing.Spec.Image.Tag)         // Should remain unchanged
+
+	// Test updating image tag only
+	patchData2 := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"image": map[string]interface{}{
+				"tag": "1.22",
+			},
+		},
+	}
+
+	err = api.applyPartialSpecUpdate(existing, patchData2)
+	require.NoError(t, err)
+
+	// Verify only image tag was updated
+	assert.Equal(t, 5, existing.Spec.ReplicaCount)                  // Should remain unchanged
+	assert.Equal(t, "1.22", existing.Spec.Image.Tag)                // Should be updated
+	assert.Equal(t, "nginx", existing.Spec.Image.Repository)        // Should remain unchanged
+	assert.Equal(t, "IfNotPresent", existing.Spec.Image.PullPolicy) // Should remain unchanged
+
+	// Test updating resources
+	patchData3 := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"limits": map[string]interface{}{
+					"cpu":    "1000m",
+					"memory": "1Gi",
+				},
+			},
+		},
+	}
+
+	err = api.applyPartialSpecUpdate(existing, patchData3)
+	require.NoError(t, err)
+
+	// Verify only resources.limits were updated
+	assert.Equal(t, "1000m", existing.Spec.Resources.Limits.CPU)      // Should be updated
+	assert.Equal(t, "1Gi", existing.Spec.Resources.Limits.Memory)     // Should be updated
+	assert.Equal(t, "100m", existing.Spec.Resources.Requests.CPU)     // Should remain unchanged
+	assert.Equal(t, "128Mi", existing.Spec.Resources.Requests.Memory) // Should remain unchanged
 }

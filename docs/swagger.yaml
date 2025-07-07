@@ -1,0 +1,242 @@
+definitions:
+  api.JaegerNginxProxyDoc:
+    description: JaegerNginxProxy resource (Swagger only)
+    properties:
+      name:
+        example: example-proxy
+        type: string
+      spec:
+        $ref: '#/definitions/v1alpha0.JaegerNginxProxySpec'
+      status:
+        $ref: '#/definitions/v1alpha0.JaegerNginxProxyStatus'
+    type: object
+  api.JaegerNginxProxyListDoc:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.JaegerNginxProxyDoc'
+        type: array
+    type: object
+  v1alpha0.Image:
+    properties:
+      pullPolicy:
+        type: string
+      repository:
+        type: string
+      tag:
+        type: string
+    type: object
+  v1alpha0.JaegerNginxProxySpec:
+    properties:
+      containerPort:
+        type: integer
+      image:
+        $ref: '#/definitions/v1alpha0.Image'
+      ports:
+        items:
+          $ref: '#/definitions/v1alpha0.Port'
+        type: array
+      replicaCount:
+        type: integer
+      resources:
+        $ref: '#/definitions/v1alpha0.Resources'
+      service:
+        $ref: '#/definitions/v1alpha0.Service'
+      upstream:
+        $ref: '#/definitions/v1alpha0.Upstream'
+    type: object
+  v1alpha0.JaegerNginxProxyStatus:
+    properties:
+      message:
+        type: string
+      ready:
+        description: Add your custom status fields here
+        type: boolean
+    type: object
+  v1alpha0.Port:
+    properties:
+      name:
+        type: string
+      path:
+        type: string
+      port:
+        type: integer
+    type: object
+  v1alpha0.Resource:
+    properties:
+      cpu:
+        type: string
+      memory:
+        type: string
+    type: object
+  v1alpha0.Resources:
+    properties:
+      limits:
+        $ref: '#/definitions/v1alpha0.Resource'
+      requests:
+        $ref: '#/definitions/v1alpha0.Resource'
+    type: object
+  v1alpha0.Service:
+    properties:
+      type:
+        type: string
+    type: object
+  v1alpha0.Upstream:
+    properties:
+      collectorHost:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/jaegernginxproxies:
+    get:
+      description: Get all JaegerNginxProxy resources
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.JaegerNginxProxyListDoc'
+      summary: List all JaegerNginxProxies
+      tags:
+      - jaegernginxproxies
+    post:
+      consumes:
+      - application/json
+      description: Create a new JaegerNginxProxy
+      parameters:
+      - description: JaegerNginxProxy object
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.JaegerNginxProxyDoc'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.JaegerNginxProxyDoc'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a JaegerNginxProxy
+      tags:
+      - jaegernginxproxies
+  /api/jaegernginxproxies/{name}:
+    delete:
+      description: Delete a JaegerNginxProxy by name
+      parameters:
+      - description: JaegerNginxProxy name
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a JaegerNginxProxy
+      tags:
+      - jaegernginxproxies
+    get:
+      description: Get a JaegerNginxProxy by name
+      parameters:
+      - description: JaegerNginxProxy name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.JaegerNginxProxyDoc'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a JaegerNginxProxy
+      tags:
+      - jaegernginxproxies
+    patch:
+      consumes:
+      - application/json
+      description: Update specific fields of an existing JaegerNginxProxy
+      parameters:
+      - description: JaegerNginxProxy name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Partial update object
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.JaegerNginxProxyDoc'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Patch a JaegerNginxProxy (partial update)
+      tags:
+      - jaegernginxproxies
+    put:
+      consumes:
+      - application/json
+      description: Update an existing JaegerNginxProxy with full spec replacement
+      parameters:
+      - description: JaegerNginxProxy name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: JaegerNginxProxy object
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.JaegerNginxProxyDoc'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.JaegerNginxProxyDoc'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a JaegerNginxProxy (full update)
+      tags:
+      - jaegernginxproxies
+swagger: "2.0"
