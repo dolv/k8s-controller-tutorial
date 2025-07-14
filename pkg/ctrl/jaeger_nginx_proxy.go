@@ -354,10 +354,23 @@ func (r *JaegerNginxProxyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if depToCheck.Spec.Replicas != nil {
 			desired = *depToCheck.Spec.Replicas
 		}
-		if depToCheck.Status.AvailableReplicas == desired && desired > 0 {
+
+		// Handle different scenarios for readiness
+		if desired == 0 {
+			// When desired replicas is 0, the deployment is ready if no pods are running
+			if depToCheck.Status.AvailableReplicas == 0 {
+				page.Status.Ready = true
+				page.Status.Message = "Deployment scaled to 0 replicas"
+			} else {
+				page.Status.Ready = false
+				page.Status.Message = fmt.Sprintf("Scaling down: %d pods still running, desired: 0", depToCheck.Status.AvailableReplicas)
+			}
+		} else if depToCheck.Status.AvailableReplicas == desired {
+			// When desired > 0 and all replicas are available
 			page.Status.Ready = true
-			page.Status.Message = "All pods are running"
+			page.Status.Message = fmt.Sprintf("All %d pods are running", desired)
 		} else {
+			// When desired > 0 but not all replicas are available
 			page.Status.Ready = false
 			page.Status.Message = fmt.Sprintf("Available replicas: %d/%d, Ready replicas: %d, Unavailable replicas: %d", depToCheck.Status.AvailableReplicas, desired, depToCheck.Status.ReadyReplicas, depToCheck.Status.UnavailableReplicas)
 		}

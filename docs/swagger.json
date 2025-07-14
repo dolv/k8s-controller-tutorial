@@ -1,0 +1,370 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/api/jaegernginxproxies": {
+            "get": {
+                "description": "Get all JaegerNginxProxy resources",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jaegernginxproxies"
+                ],
+                "summary": "List all JaegerNginxProxies",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.JaegerNginxProxyListDoc"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new JaegerNginxProxy",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jaegernginxproxies"
+                ],
+                "summary": "Create a JaegerNginxProxy",
+                "parameters": [
+                    {
+                        "description": "JaegerNginxProxy object",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.JaegerNginxProxyDoc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.JaegerNginxProxyDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/jaegernginxproxies/{name}": {
+            "get": {
+                "description": "Get a JaegerNginxProxy by name",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jaegernginxproxies"
+                ],
+                "summary": "Get a JaegerNginxProxy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "JaegerNginxProxy name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.JaegerNginxProxyDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing JaegerNginxProxy with full spec replacement",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jaegernginxproxies"
+                ],
+                "summary": "Update a JaegerNginxProxy (full update)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "JaegerNginxProxy name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "JaegerNginxProxy object",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.JaegerNginxProxyDoc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.JaegerNginxProxyDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a JaegerNginxProxy by name",
+                "tags": [
+                    "jaegernginxproxies"
+                ],
+                "summary": "Delete a JaegerNginxProxy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "JaegerNginxProxy name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update specific fields of an existing JaegerNginxProxy",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jaegernginxproxies"
+                ],
+                "summary": "Patch a JaegerNginxProxy (partial update)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "JaegerNginxProxy name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Partial update object",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.JaegerNginxProxyDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "api.JaegerNginxProxyDoc": {
+            "description": "JaegerNginxProxy resource (Swagger only)",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "example-proxy"
+                },
+                "spec": {
+                    "$ref": "#/definitions/v1alpha0.JaegerNginxProxySpec"
+                },
+                "status": {
+                    "$ref": "#/definitions/v1alpha0.JaegerNginxProxyStatus"
+                }
+            }
+        },
+        "api.JaegerNginxProxyListDoc": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.JaegerNginxProxyDoc"
+                    }
+                }
+            }
+        },
+        "v1alpha0.Image": {
+            "type": "object",
+            "properties": {
+                "pullPolicy": {
+                    "type": "string"
+                },
+                "repository": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1alpha0.JaegerNginxProxySpec": {
+            "type": "object",
+            "properties": {
+                "containerPort": {
+                    "type": "integer"
+                },
+                "image": {
+                    "$ref": "#/definitions/v1alpha0.Image"
+                },
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1alpha0.Port"
+                    }
+                },
+                "replicaCount": {
+                    "type": "integer"
+                },
+                "resources": {
+                    "$ref": "#/definitions/v1alpha0.Resources"
+                },
+                "service": {
+                    "$ref": "#/definitions/v1alpha0.Service"
+                },
+                "upstream": {
+                    "$ref": "#/definitions/v1alpha0.Upstream"
+                }
+            }
+        },
+        "v1alpha0.JaegerNginxProxyStatus": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "ready": {
+                    "description": "Add your custom status fields here",
+                    "type": "boolean"
+                }
+            }
+        },
+        "v1alpha0.Port": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1alpha0.Resource": {
+            "type": "object",
+            "properties": {
+                "cpu": {
+                    "type": "string"
+                },
+                "memory": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1alpha0.Resources": {
+            "type": "object",
+            "properties": {
+                "limits": {
+                    "$ref": "#/definitions/v1alpha0.Resource"
+                },
+                "requests": {
+                    "$ref": "#/definitions/v1alpha0.Resource"
+                }
+            }
+        },
+        "v1alpha0.Service": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1alpha0.Upstream": {
+            "type": "object",
+            "properties": {
+                "collectorHost": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
