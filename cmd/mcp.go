@@ -49,6 +49,8 @@ func NewMCPServer(serverName, version string) *server.MCPServer {
 	return s
 }
 
+// listJaegerNginxProxiesHandler handles the list_jaegernginxproxies MCP tool
+// Lists all JaegerNginxProxy resources in the configured namespace
 func listJaegerNginxProxiesHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if api.JaegerNginxProxyAPIInst == nil {
 		return mcp.NewToolResultText("JaegerNginxProxyAPI is not initialized"), nil
@@ -77,6 +79,8 @@ func listJaegerNginxProxiesHandler(ctx context.Context, req mcp.CallToolRequest)
 	return mcp.NewToolResultText(string(jsonBytes)), nil
 }
 
+// createJaegerNginxProxyHandler handles the create_jaegernginxproxy MCP tool
+// Creates a new JaegerNginxProxy resource with the specified parameters
 func createJaegerNginxProxyHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if api.JaegerNginxProxyAPIInst == nil {
 		return mcp.NewToolResultText("JaegerNginxProxyAPI is not initialized"), nil

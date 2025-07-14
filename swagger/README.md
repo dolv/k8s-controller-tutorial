@@ -13,12 +13,22 @@ Once the server is running, you can access the Swagger UI at:
 
 The API provides the following endpoints for managing JaegerNginxProxy resources:
 
+### REST API Endpoints (Port 8080)
 - `GET /api/jaegernginxproxies` - List all JaegerNginxProxy resources
 - `GET /api/jaegernginxproxies/{name}` - Get a JaegerNginxProxy by name
 - `POST /api/jaegernginxproxies` - Create a new JaegerNginxProxy
 - `PUT /api/jaegernginxproxies/{name}` - Update an existing JaegerNginxProxy (full update)
 - `PATCH /api/jaegernginxproxies/{name}` - Patch an existing JaegerNginxProxy (partial update)
 - `DELETE /api/jaegernginxproxies/{name}` - Delete a JaegerNginxProxy
+
+### MCP (Model Context Protocol) Endpoints (Port 9090)
+- `GET /sse` - Server-Sent Events stream for tool capabilities
+- `POST /message` - JSON-RPC endpoint for tool invocation
+
+### Other Endpoints
+- `GET /deployments` - List deployment names from informer cache
+- `GET /docs/swagger.json` - Get Swagger JSON specification
+- `GET /swagger` - Get Swagger UI
 
 ## Partial Updates with PATCH
 
@@ -113,6 +123,33 @@ You can update any of these fields individually or in combination:
 - When `replicaCount > 0` but not all pods are ready: `ready: false, message: "Available replicas: X/Y..."`
 - When `replicaCount = 0` and no pods running: `ready: true, message: "Deployment scaled to 0 replicas"`
 - When `replicaCount = 0` but pods still running: `ready: false, message: "Scaling down: X pods still running, desired: 0"`
+
+## MCP (Model Context Protocol) Integration
+
+The API includes MCP server support for AI/LLM integration. When enabled with `--enable-mcp`, the server provides:
+
+### Available MCP Tools
+- `list_jaegernginxproxies` - List all JaegerNginxProxy resources
+- `create_jaegernginxproxy` - Create a new JaegerNginxProxy resource
+
+### MCP Usage
+1. **Connect to SSE stream**: `GET http://localhost:9090/sse`
+2. **Send JSON-RPC messages**: `POST http://localhost:9090/message`
+3. **Example tool invocation**:
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "tools/call",
+     "params": {
+       "name": "list_jaegernginxproxies"
+     }
+   }
+   ```
+
+### When to Use MCP vs REST API
+- **Use MCP for**: AI/LLM integrations, chatbots, intelligent DevOps tools
+- **Use REST API for**: Traditional CLI tools, scripts, direct programmatic access
 
 ## Regenerating Documentation
 

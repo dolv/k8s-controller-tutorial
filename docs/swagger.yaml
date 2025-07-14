@@ -1,3 +1,4 @@
+basePath: /
 definitions:
   api.JaegerNginxProxyDoc:
     description: JaegerNginxProxy resource (Swagger only)
@@ -20,15 +21,19 @@ definitions:
   v1alpha0.Image:
     properties:
       pullPolicy:
+        default: IfNotPresent
         type: string
       repository:
+        default: nginx
         type: string
       tag:
+        default: 1.28.0
         type: string
     type: object
   v1alpha0.JaegerNginxProxySpec:
     properties:
       containerPort:
+        default: 8080
         type: integer
       image:
         $ref: '#/definitions/v1alpha0.Image'
@@ -37,6 +42,7 @@ definitions:
           $ref: '#/definitions/v1alpha0.Port'
         type: array
       replicaCount:
+        default: 1
         type: integer
       resources:
         $ref: '#/definitions/v1alpha0.Resources'
@@ -84,10 +90,24 @@ definitions:
   v1alpha0.Upstream:
     properties:
       collectorHost:
+        default: jaeger-collector.tracing.svc.cluster.local
         type: string
     type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: A Kubernetes controller tutorial with JaegerNginxProxy CRD and MCP
+    (Model Context Protocol) support. The API provides REST endpoints for managing
+    JaegerNginxProxy resources and includes an MCP server for AI/LLM integration.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: K8s Controller Tutorial API
+  version: "1.0"
 paths:
   /api/jaegernginxproxies:
     get:
@@ -239,4 +259,93 @@ paths:
       summary: Update a JaegerNginxProxy (full update)
       tags:
       - jaegernginxproxies
+  /docs/swagger.json:
+    get:
+      description: Returns the OpenAPI/Swagger JSON specification for the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Swagger JSON specification
+      tags:
+      - documentation
+  /message:
+    post:
+      consumes:
+      - application/json
+      description: Send a JSON-RPC message to the MCP server for tool invocation
+      parameters:
+      - description: JSON-RPC message
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Send MCP message
+      tags:
+      - mcp
+  /sse:
+    get:
+      description: Returns the Model Context Protocol Server-Sent Events stream for
+        tool capabilities
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream
+          schema:
+            type: string
+      summary: Get MCP SSE stream
+      tags:
+      - mcp
+  /swagger:
+    get:
+      description: Returns the Swagger UI HTML page for API documentation
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+      summary: Get Swagger UI
+      tags:
+      - documentation
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
+tags:
+- description: Operations about JaegerNginxProxy resources - CRUD operations for managing
+    nginx proxy configurations for Jaeger tracing
+  name: jaegernginxproxies
+- description: API documentation endpoints - Swagger UI and JSON specification
+  name: documentation
+- description: Deployment listing operations - View Kubernetes deployments from the
+    informer cache
+  name: deployments
+- description: Model Context Protocol (MCP) server endpoints - AI/LLM integration
+    for intelligent DevOps operations. MCP server runs on port 9090 with SSE stream
+    at /sse and JSON-RPC messages at /message
+  name: mcp
