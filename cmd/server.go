@@ -12,6 +12,7 @@ import (
 	"github.com/dolv/k8s-controller-tutorial/pkg/ctrl"
 	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
 	"github.com/google/uuid"
+	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -34,6 +35,9 @@ var (
 	serverInCluster               bool
 	serverEnableLeaderElection    bool
 	serverLeaderElectionNamespace string
+	serverEnableMCP               bool
+	serverMCPPort                 int
+	FrontendAPI                   *api.JaegerNginxProxyAPI
 )
 
 const (
@@ -232,6 +236,28 @@ var serverCmd = &cobra.Command{
 		}
 		log.Trace().Msg("Adding loggingMiddleware to handler instance")
 		wrappedHandler := loggingMiddleware(handler)
+
+		if serverEnableMCP {
+			go func() {
+				mcpServer := NewMCPServer("K8s Controller MCP", appVersion)
+
+				// Set the global API instance for MCP handlers
+				api.JaegerNginxProxyAPIInst = &api.JaegerNginxProxyAPI{
+					K8sClient: mgr.GetClient(),
+					Namespace: namespace,
+				}
+
+				sseServer := mcpserver.NewSSEServer(mcpServer,
+					mcpserver.WithBaseURL(fmt.Sprintf("http://:%d", serverMCPPort)),
+				)
+				log.Info().Msgf("Starting MCP server in SSE mode on port %d", serverMCPPort)
+				if err := sseServer.Start(fmt.Sprintf(":%d", serverMCPPort)); err != nil {
+					log.Fatal().Err(err).Msg("MCP SSE server error")
+				}
+			}()
+			log.Info().Msgf("MCP server ready on port %d", serverMCPPort)
+		}
+
 		addr := fmt.Sprintf(":%d", serverPort)
 		log.Info().Msgf("Starting FastHTTP server on %s", addr)
 		if err := fasthttp.ListenAndServe(addr, wrappedHandler); err != nil {
@@ -318,4 +344,6 @@ func init() {
 	serverCmd.Flags().StringVar(&serverLeaderElectionNamespace, "leader-election-namespace", "default", "Namespace for leader election")
 	serverCmd.Flags().StringVar(&serverKubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	serverCmd.Flags().BoolVar(&serverInCluster, "in-cluster", false, "Use in-cluster Kubernetes config")
+	serverCmd.Flags().BoolVar(&serverEnableMCP, "enable-mcp", false, "Enable MCP server")
+	serverCmd.Flags().IntVar(&serverMCPPort, "mcp-port", 9090, "Port for MCP server")
 }
