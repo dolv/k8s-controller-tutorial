@@ -31,14 +31,11 @@ spec:
             - server
             - --in-cluster
             - --enable-leader-election
-            - --metrics-port 
-            - "{{ .Values.service.httpPort }}"
             - --log-level
             - "{{ .Values.logLevel }}"
             - --enable-mcp
-            - --mcp-port
-            - "{{ .Values.service.mcpPort }}"
-            - --namespaces all
+            - --namespaces
+            - all
           ports:
             - name: http
               containerPort: {{ .Values.service.httpPort }}
