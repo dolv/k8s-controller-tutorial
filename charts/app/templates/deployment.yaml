@@ -29,10 +29,13 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - server
-            - --metrics-bind-address=:8080
-            - --log-level trace 
+            - --in-cluster
+            - --enable-leader-election
+            - --metrics-port {{ .Values.service.httpPort }}
+            - --log-level {{ .Values.logLevel }}
             - --enable-mcp
-            - --mcp-port 9090
+            - --mcp-port {{ .Values.service.mcpPort }}
+            - --namespaces all
           ports:
             - name: http
               containerPort: {{ .Values.service.httpPort }}
