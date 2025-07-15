@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/dolv/k8s-controller-tutorial/pkg/api"
 	jaegerv1alpha0 "github.com/dolv/k8s-controller-tutorial/pkg/apis/jaeger-nginx-proxy/v1alpha0"
@@ -99,6 +100,13 @@ func TestMCP_ListJaegerNginxProxiesHandler(t *testing.T) {
 	}
 	require.NoError(t, k8sClient.Create(context.Background(), proxy1))
 	require.NoError(t, k8sClient.Create(context.Background(), proxy2))
+
+	// Wait for both resources to be present
+	require.Eventually(t, func() bool {
+		list := &jaegerv1alpha0.JaegerNginxProxyList{}
+		err := k8sClient.List(context.Background(), list, client.InNamespace("default"))
+		return err == nil && len(list.Items) == 2
+	}, 5*time.Second, 100*time.Millisecond, "Should eventually see 2 JaegerNginxProxy resources")
 
 	// Call the shared API logic directly (since MCP handler is not accessible)
 	list := &jaegerv1alpha0.JaegerNginxProxyList{}
