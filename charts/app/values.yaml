@@ -39,7 +39,8 @@ service:
   type: ClusterIP
   port: 80
   httpPort: 8080  # Container port for HTTP/API/metrics/health
-  metricsPort: 8081  # Container port for HTTP/API/metrics/health
+  metricsPort: 8081  # Container port for metrics
+  probesPort: 8082   # Container port for healthz/readyz probes
   mcpPort: 9090   # Container port for MCP
 
 resources:

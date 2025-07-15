@@ -43,17 +43,20 @@ spec:
             - name: metrics
               containerPort: {{ .Values.service.metricsPort }}
               protocol: TCP
+            - name: probes
+              containerPort: {{ .Values.service.probesPort }}
+              protocol: TCP
             - name: mcp
               containerPort: {{ .Values.service.mcpPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.service.httpPort }}
+              port: {{ .Values.service.probesPort }}
           readinessProbe:
             httpGet:
               path: /readyz
-              port: {{ .Values.service.httpPort }}
+              port: {{ .Values.service.probesPort }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

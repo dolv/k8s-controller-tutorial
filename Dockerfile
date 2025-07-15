@@ -17,5 +17,6 @@ COPY --from=builder /app/jaegernginxproxy-controller .
 COPY --from=nginx /usr/sbin/nginx /usr/sbin/nginx
 EXPOSE 8080
 EXPOSE 8081
+EXPOSE 8082
 EXPOSE 9090
 ENTRYPOINT ["/jaegernginxproxy-controller"] 
