@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/dolv/k8s-controller-tutorial/pkg/api"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/rs/zerolog/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -23,6 +25,9 @@ func NewMCPServer(serverName, version string) *server.MCPServer {
 		server.WithLogging(),
 		server.WithRecovery(),
 	)
+
+	// Track tool names for list_tools
+	toolNames := []string{}
 
 	// List tool
 	listTool := mcp.NewTool("list_jaegernginxproxies",
@@ -41,10 +46,26 @@ func NewMCPServer(serverName, version string) *server.MCPServer {
 		// Add more fields as needed for full spec
 	)
 	// TODO: Add update and delete tools as needed
-
+	log.Info().Msg("[MCP] Registering list_jaegernginxproxies tool")
 	s.AddTool(listTool, listJaegerNginxProxiesHandler)
+	log.Info().Msg("[MCP] Registering list_jaegernginxproxies create_jaegernginxproxy")
 	s.AddTool(createTool, createJaegerNginxProxyHandler)
+	toolNames = append(toolNames, "list_jaegernginxproxies", "create_jaegernginxproxy")
 	// TODO: Register update/delete handlers
+
+	// Add list_tools and aliases
+	listTools := mcp.NewTool("list_tools", mcp.WithDescription("List all registered tools"))
+	toolCapabilities := mcp.NewTool("tool.capabilities", mcp.WithDescription("List all registered tools (alias)"))
+	toolsList := mcp.NewTool("tools.list", mcp.WithDescription("List all registered tools (alias)"))
+
+	listToolsHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return mcp.NewToolResultText(strings.Join(toolNames, ",")), nil
+	}
+
+	s.AddTool(listTools, listToolsHandler)
+	s.AddTool(toolCapabilities, listToolsHandler)
+	s.AddTool(toolsList, listToolsHandler)
+	toolNames = append(toolNames, "list_tools", "tool.capabilities", "tools.list")
 
 	return s
 }
