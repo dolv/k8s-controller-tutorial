@@ -12,6 +12,7 @@ import (
 	"github.com/dolv/k8s-controller-tutorial/pkg/ctrl"
 	"github.com/dolv/k8s-controller-tutorial/pkg/informer"
 	"github.com/google/uuid"
+	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -34,6 +35,8 @@ var (
 	serverInCluster               bool
 	serverEnableLeaderElection    bool
 	serverLeaderElectionNamespace string
+	serverEnableMCP               bool
+	serverMCPPort                 int
 )
 
 const (
@@ -232,6 +235,29 @@ var serverCmd = &cobra.Command{
 		}
 		log.Trace().Msg("Adding loggingMiddleware to handler instance")
 		wrappedHandler := loggingMiddleware(handler)
+
+		if serverEnableMCP {
+			log.Trace().Msg("MCP server is enabled.")
+			go func() {
+				mcpServer := NewMCPServer("K8s Controller MCP", appVersion)
+
+				// Set the global API instance for MCP handlers
+				api.JaegerNginxProxyAPIInst = &api.JaegerNginxProxyAPI{
+					K8sClient: mgr.GetClient(),
+					Namespace: namespace,
+				}
+
+				sseServer := mcpserver.NewSSEServer(mcpServer,
+					mcpserver.WithBaseURL(fmt.Sprintf("http://:%d", serverMCPPort)),
+				)
+				log.Info().Msgf("Starting MCP server in SSE mode on port %d", serverMCPPort)
+				if err := sseServer.Start(fmt.Sprintf(":%d", serverMCPPort)); err != nil {
+					log.Fatal().Err(err).Msg("MCP SSE server error")
+				}
+			}()
+			log.Info().Msgf("MCP server ready on port %d", serverMCPPort)
+		}
+
 		addr := fmt.Sprintf(":%d", serverPort)
 		log.Info().Msgf("Starting FastHTTP server on %s", addr)
 		if err := fasthttp.ListenAndServe(addr, wrappedHandler); err != nil {
@@ -267,6 +293,12 @@ func adaptHandler(h func(ctx *fasthttp.RequestCtx)) fasthttprouter.Handle {
 // --- End helper functions ---
 
 // serveSwaggerJSON serves the generated swagger.json file
+// @Summary Get Swagger JSON specification
+// @Description Returns the OpenAPI/Swagger JSON specification for the API
+// @Tags documentation
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /docs/swagger.json [get]
 func serveSwaggerJSON(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
@@ -285,6 +317,12 @@ func serveSwaggerJSON(ctx *fasthttp.RequestCtx) {
 }
 
 // serveSwaggerUI serves the Swagger UI HTML page
+// @Summary Get Swagger UI
+// @Description Returns the Swagger UI HTML page for API documentation
+// @Tags documentation
+// @Produce html
+// @Success 200 {string} string "HTML page"
+// @Router /swagger [get]
 func serveSwaggerUI(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
 
@@ -299,6 +337,36 @@ func serveSwaggerUI(ctx *fasthttp.RequestCtx) {
 	ctx.SetBody(swaggerHTML)
 }
 
+// serveMCPSSE serves the MCP SSE endpoint
+// @Summary Get MCP SSE stream
+// @Description Returns the Model Context Protocol Server-Sent Events stream for tool capabilities
+// @Tags mcp
+// @Produce text/event-stream
+// @Success 200 {string} string "SSE stream"
+// @Router /sse [get]
+// NOTE: This function is only for Swagger documentation. The real /sse endpoint is served by the MCP server.
+func serveMCPSSE(ctx *fasthttp.RequestCtx) {
+	// This is handled by the MCP SSE server, not directly by FastHTTP
+	ctx.SetStatusCode(fasthttp.StatusNotFound)
+	ctx.SetBodyString(`{"error":"MCP SSE endpoint is served on a different port"}`)
+}
+
+// serveMCPMessage serves the MCP message endpoint
+// @Summary Send MCP message
+// @Description Send a JSON-RPC message to the MCP server for tool invocation
+// @Tags mcp
+// @Accept json
+// @Produce json
+// @Param body body map[string]interface{} true "JSON-RPC message"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Router /message [post]
+func serveMCPMessage(ctx *fasthttp.RequestCtx) {
+	// This is handled by the MCP SSE server, not directly by FastHTTP
+	ctx.SetStatusCode(fasthttp.StatusNotFound)
+	ctx.SetBodyString(`{"error":"MCP message endpoint is served on a different port"}`)
+}
+
 // API endpoints:
 //   GET    /api/jaegernginxproxies         - List all JaegerNginxProxy resources
 //   GET    /api/jaegernginxproxies/:name   - Get a JaegerNginxProxy by name
@@ -309,6 +377,8 @@ func serveSwaggerUI(ctx *fasthttp.RequestCtx) {
 //   GET    /deployments                    - List deployment names from informer cache
 //   GET    /docs/swagger.json              - Get Swagger JSON specification
 //   GET    /swagger                        - Get Swagger UI
+//   GET    /sse                            - MCP SSE stream (port 9090)
+//   POST   /message                        - MCP JSON-RPC messages (port 9090)
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
@@ -318,4 +388,6 @@ func init() {
 	serverCmd.Flags().StringVar(&serverLeaderElectionNamespace, "leader-election-namespace", "default", "Namespace for leader election")
 	serverCmd.Flags().StringVar(&serverKubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	serverCmd.Flags().BoolVar(&serverInCluster, "in-cluster", false, "Use in-cluster Kubernetes config")
+	serverCmd.Flags().BoolVar(&serverEnableMCP, "enable-mcp", false, "Enable MCP server")
+	serverCmd.Flags().IntVar(&serverMCPPort, "mcp-port", 9090, "Port for MCP server")
 }

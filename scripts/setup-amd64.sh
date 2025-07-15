@@ -429,7 +429,7 @@ start() {
     sudo kubectl apply -f config/kube-proxy/
     sleep 10
     echo "Deploy CoreDNS..."
-    sudo kubectl apply -f config/codedns/
+    sudo kubectl apply -R -f config/coredns/output/
 }
 
 stop() {

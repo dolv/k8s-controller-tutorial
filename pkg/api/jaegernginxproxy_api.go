@@ -18,6 +18,8 @@ type JaegerNginxProxyAPI struct {
 	Namespace string // default namespace for simplicity
 }
 
+var JaegerNginxProxyAPIInst *JaegerNginxProxyAPI
+
 // JaegerNginxProxyDoc is a simplified version for API docs
 // @Description JaegerNginxProxy resource (Swagger only)
 type JaegerNginxProxyDoc struct {

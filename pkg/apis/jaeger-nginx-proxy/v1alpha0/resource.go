@@ -23,9 +23,9 @@ type JaegerNginxProxy struct {
 
 // JaegerNginxProxySpec defines the desired state of JaegerNginxProxy
 type JaegerNginxProxySpec struct {
-	ReplicaCount  int       `json:"replicaCount"`
+	ReplicaCount  int       `json:"replicaCount" default:"1"`
 	Upstream      Upstream  `json:"upstream"`
-	ContainerPort int       `json:"containerPort"`
+	ContainerPort int       `json:"containerPort" default:"8080"`
 	Image         Image     `json:"image"`
 	Ports         []Port    `json:"ports"`
 	Service       Service   `json:"service"`
@@ -33,7 +33,7 @@ type JaegerNginxProxySpec struct {
 }
 
 type Upstream struct {
-	CollectorHost string `json:"collectorHost"`
+	CollectorHost string `json:"collectorHost" default:"jaeger-collector.tracing.svc.cluster.local"`
 }
 
 type Port struct {
@@ -57,9 +57,9 @@ type Resource struct {
 }
 
 type Image struct {
-	Repository string `json:"repository"`
-	Tag        string `json:"tag"`
-	PullPolicy string `json:"pullPolicy"`
+	Repository string `json:"repository" default:"nginx"`
+	Tag        string `json:"tag" default:"1.28.0"`
+	PullPolicy string `json:"pullPolicy" default:"IfNotPresent"`
 }
 
 // +kubebuilder:object:root=true

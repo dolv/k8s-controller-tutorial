@@ -9,7 +9,16 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -240,6 +249,112 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/docs/swagger.json": {
+            "get": {
+                "description": "Returns the OpenAPI/Swagger JSON specification for the API",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documentation"
+                ],
+                "summary": "Get Swagger JSON specification",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/message": {
+            "post": {
+                "description": "Send a JSON-RPC message to the MCP server for tool invocation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Send MCP message",
+                "parameters": [
+                    {
+                        "description": "JSON-RPC message",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sse": {
+            "get": {
+                "description": "Returns the Model Context Protocol Server-Sent Events stream for tool capabilities",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get MCP SSE stream",
+                "responses": {
+                    "200": {
+                        "description": "SSE stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/swagger": {
+            "get": {
+                "description": "Returns the Swagger UI HTML page for API documentation",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "documentation"
+                ],
+                "summary": "Get Swagger UI",
+                "responses": {
+                    "200": {
+                        "description": "HTML page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -274,13 +389,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "pullPolicy": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "IfNotPresent"
                 },
                 "repository": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "nginx"
                 },
                 "tag": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "1.28.0"
                 }
             }
         },
@@ -288,7 +406,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "containerPort": {
-                    "type": "integer"
+                    "type": "integer",
+                    "default": 8080
                 },
                 "image": {
                     "$ref": "#/definitions/v1alpha0.Image"
@@ -300,7 +419,8 @@ const docTemplate = `{
                     }
                 },
                 "replicaCount": {
-                    "type": "integer"
+                    "type": "integer",
+                    "default": 1
                 },
                 "resources": {
                     "$ref": "#/definitions/v1alpha0.Resources"
@@ -373,21 +493,47 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "collectorHost": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "jaeger-collector.tracing.svc.cluster.local"
                 }
             }
         }
-    }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    },
+    "tags": [
+        {
+            "description": "Operations about JaegerNginxProxy resources - CRUD operations for managing nginx proxy configurations for Jaeger tracing",
+            "name": "jaegernginxproxies"
+        },
+        {
+            "description": "API documentation endpoints - Swagger UI and JSON specification",
+            "name": "documentation"
+        },
+        {
+            "description": "Deployment listing operations - View Kubernetes deployments from the informer cache",
+            "name": "deployments"
+        },
+        {
+            "description": "Model Context Protocol (MCP) server endpoints - AI/LLM integration for intelligent DevOps operations. MCP server runs on port 9090 with SSE stream at /sse and JSON-RPC messages at /message",
+            "name": "mcp"
+        }
+    ]
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
-	Host:             "",
-	BasePath:         "",
+	Version:          "1.0",
+	Host:             "localhost:8080",
+	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "K8s Controller Tutorial API",
+	Description:      "A Kubernetes controller tutorial with JaegerNginxProxy CRD and MCP (Model Context Protocol) support. The API provides REST endpoints for managing JaegerNginxProxy resources and includes an MCP server for AI/LLM integration.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
