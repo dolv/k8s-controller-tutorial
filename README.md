@@ -431,7 +431,29 @@ swag init -g main.go
 - `docs/swagger.yaml` - OpenAPI specification in YAML format
 - `swagger/index.html` - Swagger UI interface
 - `swagger/README.md` - Documentation for the Swagger integration
+---
 
+## Step 13: Added MCP Integration
+
+- Integrated [MCP (Multi-Cluster Platform)](https://github.com/mark3labs/mcp-go) server into the project.
+- MCP server can be enabled with the `--enable-mcp` flag and runs on a configurable port (default: 9090).
+- MCP server runs alongside the FastHTTP API server and controller-runtime manager.
+- Provides a real-time event stream and management interface for Kubernetes resources via the MCP protocol.
+
+**Usage:**
+```sh
+git switch feature/step13-mcp-integration 
+
+go run main.go server --log-level trace --enable-mcp --mcp-port 9090
+# MCP server will be available on http://localhost:9090
+```
+- Use an MCP client or compatible tool to connect and invoke registered tools.
+
+**What it does:**
+- Enables external systems to interact with the controller via the MCP protocol (list/create FrontendPages, etc.).
+- SSE mode provides real-time updates for tool execution.
+
+---
 ## Project Structure
 
 - `.github/workflows/` — GitHub Actions workflows for CI/CD.
@@ -441,6 +463,7 @@ swag init -g main.go
     - `cmd/list.go` — List CLI command
     - `cmd/delete.go` — Delete CLI command
     - `cmd/create.go` — Create CLI command
+    - `cmd/mcp.go` - MCP server implementation
 - `config/crd/` — CRD definitions
 - `config/webhook/` — Webhook configuration manifests
 - `docs/` — Documentation

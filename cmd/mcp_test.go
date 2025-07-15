@@ -17,6 +17,9 @@ import (
 func setupTestAPIWithManager(t *testing.T) (*api.JaegerNginxProxyAPI, client.Client, func()) {
 	mgr, k8sClient, _, cleanup := testutil.StartTestManager(t)
 
+	// Register the JaegerNginxProxy CRD scheme
+	require.NoError(t, jaegerv1alpha0.AddToScheme(mgr.GetScheme()))
+
 	require.NoError(t, ctrl.AddJaegerNginxProxyController(mgr))
 
 	ctx, cancel := context.WithCancel(context.Background())

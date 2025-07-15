@@ -37,7 +37,6 @@ var (
 	serverLeaderElectionNamespace string
 	serverEnableMCP               bool
 	serverMCPPort                 int
-	FrontendAPI                   *api.JaegerNginxProxyAPI
 )
 
 const (
@@ -344,6 +343,7 @@ func serveSwaggerUI(ctx *fasthttp.RequestCtx) {
 // @Produce text/event-stream
 // @Success 200 {string} string "SSE stream"
 // @Router /sse [get]
+// NOTE: This function is only for Swagger documentation. The real /sse endpoint is served by the MCP server.
 func serveMCPSSE(ctx *fasthttp.RequestCtx) {
 	// This is handled by the MCP SSE server, not directly by FastHTTP
 	ctx.SetStatusCode(fasthttp.StatusNotFound)
