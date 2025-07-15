@@ -12,12 +12,18 @@ spec:
       protocol: TCP
       name: http
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 14f38d6 (add back metricsPost)
     - port: {{ .Values.service.metricsPort }}
       targetPort: metrics
       protocol: TCP
       name: metrics
+<<<<<<< HEAD
 =======
 >>>>>>> ad6f447 (re-think ports)
+=======
+>>>>>>> 14f38d6 (add back metricsPost)
     - port: {{ .Values.service.mcpPort }}
       targetPort: mcp
       protocol: TCP
