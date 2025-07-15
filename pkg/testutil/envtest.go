@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -25,6 +26,40 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+// findProjectRoot recursively searches upwards from the current directory for 'go.mod' and returns its absolute path.
+func findProjectRoot() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	dir := cwd
+	for {
+		candidate := filepath.Join(dir, "go.mod")
+		if stat, err := os.Stat(candidate); err == nil && !stat.IsDir() {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break // reached root
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf("go.mod not found in any parent directory of %s", cwd)
+}
+
+// findCRDDir returns the absolute path to config/crd inside the project root.
+func findCRDDir() (string, error) {
+	projectRoot, err := findProjectRoot()
+	if err != nil {
+		return "", err
+	}
+	crdPath := filepath.Join(projectRoot, "config", "crd")
+	if stat, err := os.Stat(crdPath); err == nil && stat.IsDir() {
+		return crdPath, nil
+	}
+	return "", fmt.Errorf("config/crd directory not found in project root %s", projectRoot)
+}
+
 // StartTestManager sets up envtest, scheme, manager, and returns them with cleanup.
 func StartTestManager(t *testing.T) (mgr manager.Manager, k8sClient client.Client, restCfg *rest.Config, cleanup func()) {
 	t.Helper()
@@ -34,34 +69,41 @@ func StartTestManager(t *testing.T) (mgr manager.Manager, k8sClient client.Clien
 	require.NoError(t, scheme.AddToScheme(testScheme))
 	require.NoError(t, apiextensionsv1.AddToScheme(testScheme))
 
+	crdAbsPath, errCRD := findCRDDir()
+	if errCRD != nil {
+		t.Fatalf("[envtest] %v", errCRD)
+	}
+	fmt.Printf("[envtest] Using CRD directory: %s\n", crdAbsPath)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	env := &envtest.Environment{
 		ErrorIfCRDPathMissing:    true,
 		AttachControlPlaneOutput: false,
+		CRDDirectoryPaths:        []string{crdAbsPath},
 	}
-	var startErr = make(chan error)
+	startErr := make(chan error)
 	var cfg *rest.Config
-	var err error
+	var errEnv error
 
 	go func() {
-		cfg, err = env.Start()
-		startErr <- err
+		cfg, errEnv = env.Start()
+		startErr <- errEnv
 	}()
 
 	// Wait for environment to start with timeout
 	select {
-	case err := <-startErr:
-		require.NoError(t, err, "Failed to start test environment")
+	case errEnv := <-startErr:
+		require.NoError(t, errEnv, "Failed to start test environment")
 	case <-ctx.Done():
 		t.Fatal("Timeout waiting for test environment to start")
 	}
 
 	require.NotNil(t, cfg)
 
-	mgr, err = manager.New(cfg, manager.Options{Scheme: testScheme, LeaderElection: false})
-	require.NoError(t, err)
+	mgr, errEnv = manager.New(cfg, manager.Options{Scheme: testScheme, LeaderElection: false})
+	require.NoError(t, errEnv)
 
 	ctx, cancel = context.WithCancel(context.Background())
 	go func() {
