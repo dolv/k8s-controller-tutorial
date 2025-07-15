@@ -11,10 +11,13 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+<<<<<<< HEAD
     - port: {{ .Values.service.metricsPort }}
       targetPort: metrics
       protocol: TCP
       name: metrics
+=======
+>>>>>>> ad6f447 (re-think ports)
     - port: {{ .Values.service.mcpPort }}
       targetPort: mcp
       protocol: TCP
