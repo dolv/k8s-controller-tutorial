@@ -41,8 +41,8 @@ func NewMCPServer(serverName, version string) *server.MCPServer {
 		mcp.WithNumber("containerPort", mcp.Description("Container port")),
 		mcp.WithString("imageRepository", mcp.Description("Image repository")),
 		mcp.WithString("imageTag", mcp.Description("Image tag")),
-		mcp.WithString("imagePullPolicy", mcp.Description("Image pull policy")),
 		mcp.WithString("upstreamCollectorHost", mcp.Description("Upstream collector host")),
+		mcp.WithArray("ports", mcp.Description("List of ports for the service")),
 		// Add more fields as needed for full spec
 	)
 	// TODO: Add update and delete tools as needed
@@ -110,10 +110,76 @@ func createJaegerNginxProxyHandler(ctx context.Context, req mcp.CallToolRequest)
 	replicaCount := req.GetInt("replicaCount", 1)
 	containerPort := req.GetInt("containerPort", 8080)
 	imageRepository := req.GetString("imageRepository", "nginx")
-	imageTag := req.GetString("imageTag", "latest")
+	imageTag := req.GetString("imageTag", "1.28.0")
 	imagePullPolicy := req.GetString("imagePullPolicy", "IfNotPresent")
-	upstreamCollectorHost := req.GetString("upstreamCollectorHost", "")
-	// TODO: Add more fields as needed
+	upstreamCollectorHost := req.GetString("upstreamCollectorHost", "jaeger-collector.tracing.svc.cluster.local")
+
+	// Parse ports argument (array of objects)
+	var ports []jaegerv1alpha0.Port
+	if args := req.GetArguments(); args != nil {
+		if arr, ok := args["ports"].([]interface{}); ok {
+			for _, p := range arr {
+				if portMap, ok := p.(map[string]interface{}); ok {
+					port := jaegerv1alpha0.Port{}
+					if v, ok := portMap["name"].(string); ok {
+						port.Name = v
+					}
+					if v, ok := portMap["port"].(float64); ok {
+						port.Port = int(v)
+					}
+					if v, ok := portMap["path"].(string); ok {
+						port.Path = v
+					}
+					ports = append(ports, port)
+				}
+			}
+		}
+	}
+	// If ports is still empty, use defaults from examples/jaegernginxproxy.yaml
+	if len(ports) == 0 {
+		ports = []jaegerv1alpha0.Port{
+			{Name: "http", Port: 14268, Path: "/api/traces"},
+			{Name: "grpc", Port: 14250, Path: "/jaeger.api.v2.CollectorService/PostSpans"},
+		}
+	}
+
+	// Parse service argument (object)
+	var service jaegerv1alpha0.Service
+	service.Type = "ClusterIP" // default
+	if args := req.GetArguments(); args != nil {
+		if svc, ok := args["service"].(map[string]interface{}); ok {
+			if v, ok := svc["type"].(string); ok {
+				service.Type = v
+			}
+		}
+	}
+
+	// Parse resources argument (object)
+	var resources jaegerv1alpha0.Resources
+	resources.Limits.CPU = "500m"
+	resources.Limits.Memory = "512Mi"
+	resources.Requests.CPU = "100m"
+	resources.Requests.Memory = "128Mi"
+	if args := req.GetArguments(); args != nil {
+		if res, ok := args["resources"].(map[string]interface{}); ok {
+			if limits, ok := res["limits"].(map[string]interface{}); ok {
+				if v, ok := limits["cpu"].(string); ok {
+					resources.Limits.CPU = v
+				}
+				if v, ok := limits["memory"].(string); ok {
+					resources.Limits.Memory = v
+				}
+			}
+			if requests, ok := res["requests"].(map[string]interface{}); ok {
+				if v, ok := requests["cpu"].(string); ok {
+					resources.Requests.CPU = v
+				}
+				if v, ok := requests["memory"].(string); ok {
+					resources.Requests.Memory = v
+				}
+			}
+		}
+	}
 
 	obj := &jaegerv1alpha0.JaegerNginxProxy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -131,7 +197,9 @@ func createJaegerNginxProxyHandler(ctx context.Context, req mcp.CallToolRequest)
 			Upstream: jaegerv1alpha0.Upstream{
 				CollectorHost: upstreamCollectorHost,
 			},
-			// You may want to add Ports, Service, Resources, etc.
+			Ports:     ports,
+			Service:   service,
+			Resources: resources,
 		},
 	}
 	err := api.JaegerNginxProxyAPIInst.K8sClient.Create(ctx, obj)

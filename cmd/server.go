@@ -237,6 +237,7 @@ var serverCmd = &cobra.Command{
 		wrappedHandler := loggingMiddleware(handler)
 
 		if serverEnableMCP {
+			log.Trace().Msg("MCP server is enabled.")
 			go func() {
 				mcpServer := NewMCPServer("K8s Controller MCP", appVersion)
 

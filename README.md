@@ -450,7 +450,7 @@ go run main.go server --log-level trace --enable-mcp --mcp-port 9090
 - Use an MCP client or compatible tool to connect and invoke registered tools.
 
 **What it does:**
-- Enables external systems to interact with the controller via the MCP protocol (list/create FrontendPages, etc.).
+- Enables external systems to interact with the controller via the MCP protocol (list/create JaegerNginxPorxies, etc.).
 - SSE mode provides real-time updates for tool execution.
 
 ---
