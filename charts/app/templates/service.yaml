@@ -15,5 +15,13 @@ spec:
       targetPort: health
       protocol: TCP
       name: health
+    - port: {{ .Values.service.mcpPort }}
+      targetPort: mcp
+      protocol: TCP
+      name: mcp
+    - port: {{ .Values.service.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
   selector:
     {{- include "app.selectorLabels" . | nindent 4 }} 
