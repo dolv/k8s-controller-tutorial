@@ -7,7 +7,8 @@ This Helm chart deploys the app with configurable image repository and tag.
 Override the image tag to deploy a specific version:
 
 ```sh
-helm upgrade --install jaegernginxproxy-controller ./charts/app \
+helm upgrade --namespace controllers --create-namespace \
+   --install jaegernginxproxy-controller ./charts/app \
   --set image.tag=0.1.0-0aff3707
 ```
 
