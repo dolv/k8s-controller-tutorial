@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrlruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -31,6 +32,7 @@ import (
 var (
 	serverPort                    int
 	serverMetricsPort             int
+	serverProbesPort              int
 	serverKubeconfig              string
 	serverInCluster               bool
 	serverEnableLeaderElection    bool
@@ -122,12 +124,25 @@ var serverCmd = &cobra.Command{
 			LeaderElectionID:        "jaeger-nginx-proxy-controller-leader-election",
 			LeaderElectionNamespace: serverLeaderElectionNamespace,
 			Metrics:                 server.Options{BindAddress: fmt.Sprintf(":%d", serverMetricsPort)},
+			HealthProbeBindAddress:  fmt.Sprintf(":%d", serverProbesPort),
 		},
 		)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create controller-runtime manager")
 			os.Exit(1)
 		}
+
+		// Register health and readiness checks so /healthz and /readyz return 200 OK
+		if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+			log.Error().Err(err).Msg("Failed to set up health check")
+			os.Exit(1)
+		}
+		log.Debug().Msg("Healthz check registered successfully")
+		if err := mgr.AddReadyzCheck("ping", healthz.Ping); err != nil {
+			log.Error().Err(err).Msg("Failed to set up readiness check")
+			os.Exit(1)
+		}
+		log.Debug().Msg("Readyz check registered successfully")
 
 		// Register the JaegerNginxProxy CRD scheme
 		if err := jaegernginxproxyv1alpha0.AddToScheme(mgr.GetScheme()); err != nil {
@@ -384,6 +399,7 @@ func init() {
 	rootCmd.AddCommand(serverCmd)
 	serverCmd.Flags().IntVar(&serverPort, "port", 8080, "Port to run the server on")
 	serverCmd.Flags().IntVar(&serverMetricsPort, "metrics-port", 8081, "Port for controller manager metrics")
+	serverCmd.Flags().IntVar(&serverProbesPort, "probes-port", 8082, "Port for controller manager probes")
 	serverCmd.Flags().BoolVar(&serverEnableLeaderElection, "enable-leader-election", true, "Enable leader election for controller manager")
 	serverCmd.Flags().StringVar(&serverLeaderElectionNamespace, "leader-election-namespace", "default", "Namespace for leader election")
 	serverCmd.Flags().StringVar(&serverKubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
