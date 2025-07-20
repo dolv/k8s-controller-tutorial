@@ -1,4 +1,4 @@
-APP = k8s-controller-tutorial
+APP = jaegernginxproxy-controller
 VERSION ?= $(shell git describe --tags --always --dirty)
 
 BUILD_FLAGS = -v -o $(APP) -ldflags "-X=github.com/dolv/$(APP)/cmd.appVersion=$(VERSION)"

@@ -7,9 +7,9 @@ This Helm chart deploys the app with configurable image repository and tag.
 Override the image tag to deploy a specific version:
 
 ```sh
-helm install my-app ./charts/app \
-  --set image.repository=ghcr.io/your-org/app \
-  --set image.tag=v1.2.3
+helm upgrade --namespace controllers --create-namespace \
+   --install jaegernginxproxy-controller ./charts/app \
+  --set image.tag=0.1.0-0aff3707
 ```
 
 The image tag is set by CI to the Git tag (if present) or the commit SHA.

@@ -28,33 +28,77 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            - --leader-elect
-            - --metrics-bind-address=:8080
-            - --health-probe-bind-address=:8081
+            - server
+            - --in-cluster
+            - --enable-leader-election
+            - --log-level
+            - "{{ .Values.logLevel }}"
+            - --enable-mcp
+            - --namespaces
+            - all
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.service.httpPort }}
               protocol: TCP
-            - name: health
-              containerPort: 8081
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+              protocol: TCP
+            - name: probes
+              containerPort: {{ .Values.service.probesPort }}
+              protocol: TCP
+            - name: mcp
+              containerPort: {{ .Values.service.mcpPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
               path: /healthz
-              port: health
+              port: {{ .Values.service.probesPort }}
           readinessProbe:
             httpGet:
               path: /readyz
-              port: health
+              port: {{ .Values.service.probesPort }}
+            - --metrics-bind-address=:8080
+            - --log-level trace 
+            - --enable-mcp
+            - --mcp-port 9090
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.httpPort }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+              protocol: TCP
+            - name: mcp
+              containerPort: {{ .Values.service.mcpPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.httpPort }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.service.httpPort }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- if .Values.affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
+      {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - {{ include "app.name" . }}
+              topologyKey: kubernetes.io/hostname
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
