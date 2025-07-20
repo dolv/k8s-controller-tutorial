@@ -29,7 +29,6 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - server
-<<<<<<< HEAD
             - --in-cluster
             - --enable-leader-election
             - --log-level
@@ -58,7 +57,6 @@ spec:
             httpGet:
               path: /readyz
               port: {{ .Values.service.probesPort }}
-=======
             - --metrics-bind-address=:8080
             - --log-level trace 
             - --enable-mcp
@@ -81,7 +79,6 @@ spec:
             httpGet:
               path: /readyz
               port: {{ .Values.service.httpPort }}
->>>>>>> ad6f447 (re-think ports)
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
