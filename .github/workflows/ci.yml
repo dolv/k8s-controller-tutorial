@@ -11,6 +11,7 @@ on:
       - 'cmd/**'
       - 'pkg/**'
       - '.github/workflows/ci.yml'
+      - 'Dockerfile'
   pull_request:
     branches: [ "main", "feature/**" ]
     paths:
