@@ -14,6 +14,7 @@ FROM nginx:1.28.0 AS nginx
 FROM gcr.io/distroless/static-debian12
 WORKDIR /
 COPY --from=builder /app/jaegernginxproxy-controller .
+COPY --from=builder /app/swagger /swagger
 COPY --from=nginx /usr/sbin/nginx /usr/sbin/nginx
 EXPOSE 8080
 EXPOSE 8081
